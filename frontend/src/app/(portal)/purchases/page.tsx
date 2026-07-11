@@ -5,8 +5,8 @@ import { usePurchases } from "@/hooks/usePurchases";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import StatCard from "@/components/ui/StatCard";
-import GlassCard from "@/components/ui/GlassCard";
-import Badge from "@/components/ui/Badge";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { AlertCircle, ShoppingBag, Receipt, TrendingUp } from "lucide-react";
 
 /* ── Product image map based on item name keywords ── */
@@ -91,11 +91,11 @@ export default function PurchasesPage() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         {data.purchases.length === 0 ? (
-          <GlassCard style={{ padding: 40, textAlign: "center" }}>
+          <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 40, textAlign: "center" }}>
             <ShoppingBag size={48} color="var(--text-muted)" style={{ margin: "0 auto 16px", opacity: 0.5 }} />
             <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>No purchases yet</h3>
             <p style={{ color: "var(--text-muted)" }}>Start shopping to see your history here.</p>
-          </GlassCard>
+          </Card>
         ) : (
           data.purchases.map((purchase, idx) => {
             const storeGrad = getStoreGradient(purchase.storeName);

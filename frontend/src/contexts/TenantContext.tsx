@@ -7,11 +7,18 @@ import { getToken } from "@/lib/auth";
 interface Outlet {
   id: string;
   name: string;
+  location?: string;
+  points?: number;
+  tier?: string;
+  lastVisit?: string;
 }
 
 interface Organization {
   id: string;
   name: string;
+  logoUrl?: string;
+  industry?: string;
+  totalOrgPoints?: number;
   outlets: Outlet[];
 }
 
@@ -45,7 +52,23 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await api.get("/customer/organizations");
       if (res.data.success && res.data.data) {
-        const orgsList: Organization[] = res.data.data;
+        const rawOrgs = res.data.data.organizations || res.data.data;
+        const orgsList: Organization[] = rawOrgs.map((o: any) => ({
+          id: o.organizationId || o.id,
+          name: o.organizationName || o.name,
+          logoUrl: o.logoUrl,
+          industry: o.industry,
+          totalOrgPoints: o.totalOrgPoints,
+          outlets: (o.outlets || []).map((out: any) => ({
+            id: out.outletId || out.id,
+            name: out.outletName || out.name,
+            location: out.location,
+            points: out.points,
+            tier: out.tier,
+            lastVisit: out.lastVisit,
+          }))
+        }));
+        
         setOrganizations(orgsList);
 
         if (orgsList.length > 0) {
@@ -95,17 +118,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }, [organizations]);
 
   const switchOutlet = useCallback((outletId: string) => {
-    if (!activeOrgId) return;
-    const matchedOrg = organizations.find((o) => o.id === activeOrgId);
-    if (!matchedOrg) return;
-
-    const matchedOutlet = matchedOrg.outlets.find((o) => o.id === outletId);
-    if (!matchedOutlet) return;
-
     localStorage.setItem("selectedOutletId", outletId);
     setActiveOutletId(outletId);
     clearApiCache();
-  }, [activeOrgId, organizations]);
+    
+    // Dispatch a custom event to notify other components (like page reloads if needed, but not strictly required here)
+    window.dispatchEvent(new Event("outletChanged"));
+  }, []);
 
   const activeOrg = organizations.find((o) => o.id === activeOrgId) || null;
   const activeOutlet = activeOrg?.outlets.find((o) => o.id === activeOutletId) || null;

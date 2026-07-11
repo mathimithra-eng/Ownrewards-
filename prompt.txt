@@ -1,0 +1,21 @@
+const memberships = await CustomerOutlets.find({ customerId }).populate('outletId organizationId');
+
+const uniqueOrgs = new Set(memberships.map(m => m.organizationId.toString()));
+const uniqueOutlets = new Set(memberships.map(m => m.outletId.toString()));
+
+if (uniqueOrgs.size === 1 && uniqueOutlets.size === 1) {
+  // redirect straight to dashboard with that org/outlet pre-selected
+} else {
+  // show organization/outlet selection screen
+},Rule 1 — one org, one outlet → skip selection, go straight to dashboard
+After fetching customerOutlets for the logged-in customer:,Rule 2 — no offers, no transactions → show error on phone number (login) page
+This check has to run before login succeeds, right after the phone number is submitted:
+js const hasTransactions = await Transactions.exists({ customerId });
+const hasOffers = await Offers.exists({ organizationId: { $in: [...uniqueOrgs] }, active: true });
+
+if (!hasTransactions && !hasOffers) {
+  return res.status(403).json({
+    status: "error",
+    message: "No active offers or transactions found for this account."
+  });
+},One thing to flag: your two conditions can technically overlap — a customer could have one org/one outlet and also zero offers/transactions at the same time. Make sure your login flow checks the "no offer, no transaction" condition first (it blocks login entirely), and only runs the "single org/outlet → dashboard" check after that gate passes.  i given api in ownrewards mongodb compass to update data in ownrewards customer portal connect to it ,also display details accordingly localhost 27017 in mongodb compass

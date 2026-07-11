@@ -1,56 +1,104 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bell, LogOut, Search, Store, MapPin, ChevronDown, Check } from "lucide-react";
+import { Bell, LogOut, Search, Store, ChevronDown, Check, Crown, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTenant } from "@/contexts/TenantContext";
-
+import { useNotifications } from "@/hooks/useNotifications";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 export default function Header() {
   const { customer, logout } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   const {
-    organizations,
-    activeOrgId,
     activeOutletId,
     activeOrg,
     activeOutlet,
-    switchOrganization,
     switchOutlet,
   } = useTenant();
 
-  // Dropdown visibility states
-  const [orgOpen, setOrgOpen] = useState(false);
-  const [outletOpen, setOutletOpen] = useState(false);
+  const { data: notificationsData } = useNotifications();
 
-  // Dropdown search query states
-  const [orgSearch, setOrgSearch] = useState("");
+  // Dropdown visibility states
+  const showOrgSwitcher = false;
+  const showOutletSwitcher = !!activeOutlet;
+  const hasMultipleOutlets = activeOrg && activeOrg.outlets.length > 1;
+
   const [outletSearch, setOutletSearch] = useState("");
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/coupons?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return;
+
+    setIsMobileSearchOpen(false);
+
+    // Global App Navigation Search
+    if (query.includes("dashboard") || query === "home") return router.push("/dashboard");
+    if (query.includes("reward")) return router.push("/rewards");
+    if (query.includes("purchase") || query.includes("order") || query.includes("bill")) return router.push("/purchases");
+    if (query.includes("profile") || query.includes("account")) return router.push("/profile");
+    if (query.includes("feedback") || query.includes("review") || query.includes("suggestion")) return router.push("/review");
+    if (query.includes("notification")) return router.push("/notifications");
+
+    // Fall back to coupon search
+    router.push(`/coupons?search=${encodeURIComponent(searchQuery.trim())}`);
   };
-
-  // Determine visibility rules
-  const showOrgSwitcher = organizations.length > 1;
-  const showOutletSwitcher = activeOrg && activeOrg.outlets.length > 1;
-
-  // Filter items based on search
-  const filteredOrgs = organizations.filter((org) =>
-    org.name.toLowerCase().includes(orgSearch.toLowerCase())
-  );
 
   const filteredOutlets = activeOrg
     ? activeOrg.outlets.filter((out) =>
-        out.name.toLowerCase().includes(outletSearch.toLowerCase())
-      )
+      out.name.toLowerCase().includes(outletSearch.toLowerCase())
+    )
     : [];
+
+  if (isMobileSearchOpen) {
+    return (
+      <header
+        style={{
+          height: "var(--header-height)",
+          borderBottom: "1px solid var(--glass-border)",
+          background: "var(--bg-surface)",
+          backdropFilter: "blur(12px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 clamp(8px, 2vw, 20px)",
+          width: "100%",
+          boxSizing: "border-box",
+          gap: 12
+        }}
+      >
+        <form onSubmit={handleSearch} style={{ flex: 1, position: "relative" }}>
+          <Search size={16} color="var(--text-muted)" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+          <Input
+            autoFocus
+            type="text"
+            placeholder="Search offers, coupons..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-10 rounded-full text-sm bg-muted/50 border-border/50 w-full"
+            style={{ paddingLeft: "36px" }}
+          />
+        </form>
+        <button onClick={() => setIsMobileSearchOpen(false)} style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: "14px", fontWeight: 600, cursor: "pointer", padding: "8px" }}>Cancel</button>
+      </header>
+    );
+  }
 
   return (
     <header
@@ -65,14 +113,14 @@ export default function Header() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 20px",
+        padding: "0 clamp(8px, 2vw, 20px)",
         width: "100%",
         boxSizing: "border-box",
         boxShadow: "0 1px 0 var(--glass-border)",
       }}
     >
       {/* Desktop Search / Mobile Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1, maxWidth: 400 }}>
+      <div className="lg:flex-1 lg:max-w-[400px]" style={{ display: "flex", alignItems: "center", gap: 16 }}>
         {/* Mobile: Logo */}
         <div className="lg:hidden" style={{ fontWeight: 700, fontSize: 16, color: "var(--text-primary)", flexShrink: 0 }}>
           <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: "contain" }} />
@@ -86,13 +134,13 @@ export default function Header() {
               color="var(--text-muted)"
               style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}
             />
-            <input
+            <Input
               type="text"
               placeholder="Search offers, coupons..."
-              className="input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: 36, height: 38, borderRadius: 99, fontSize: 13, background: "var(--bg-elevated)", border: "1px solid var(--glass-border)", width: "100%" }}
+              className="h-9 rounded-full text-xs bg-muted/50 border-border/50 w-full"
+              style={{ paddingLeft: "36px" }}
             />
           </form>
         </div>
@@ -101,49 +149,22 @@ export default function Header() {
       {/* Center Stacked Switchers */}
       {(showOrgSwitcher || showOutletSwitcher) && (
         <div
+          className="flex-1 lg:flex-none"
           style={{
             display: "flex",
             flexDirection: "column",
             gap: 4,
             justifyContent: "center",
-            margin: "0 24px",
+            margin: "0 clamp(4px, 2vw, 24px)",
             position: "relative",
-            minWidth: 160,
+            minWidth: "clamp(100px, 20vw, 160px)",
+            flexShrink: 1,
           }}
         >
-          {/* Active Organization Display */}
-          {activeOrg && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "4px 12px",
-                height: 26,
-                borderRadius: 6,
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-primary)",
-                fontSize: 12,
-                fontWeight: 600,
-                width: "100%",
-              }}
-            >
-              <Store size={12} color="var(--gold)" style={{ flexShrink: 0 }} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {activeOrg.name}
-              </span>
-            </div>
-          )}
-
-          {/* Outlet Switcher */}
-          {showOutletSwitcher && activeOutlet && (
+          {/* Organization Switcher */}
+          {showOrgSwitcher && activeOrg && (
             <div style={{ position: "relative" }}>
-              <button
-                onClick={() => {
-                  setOutletOpen(!outletOpen);
-                  setOrgOpen(false);
-                }}
+              <div
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -154,178 +175,149 @@ export default function Header() {
                   borderRadius: 6,
                   background: "var(--bg-elevated)",
                   border: "1px solid var(--glass-border)",
-                  cursor: "pointer",
-                  color: "var(--text-secondary)",
-                  fontSize: 11,
-                  fontWeight: 500,
+                  color: "var(--text-primary)",
+                  fontSize: 12,
+                  fontWeight: 600,
                   width: "100%",
                   textAlign: "left",
-                  transition: "all 0.2s ease",
                 }}
-                className="hover:border-[var(--gold)]"
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-                  <MapPin size={11} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                  <Store size={12} color="var(--gold)" style={{ flexShrink: 0 }} />
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {activeOutlet.name}
+                    {activeOrg.name}
                   </span>
                 </div>
-                <ChevronDown size={11} color="var(--text-muted)" style={{ flexShrink: 0 }} />
-              </button>
+              </div>
+            </div>
+          )}
 
-              {/* Outlet Dropdown Menu */}
-              {outletOpen && (
-                <>
-                  <div
-                    onClick={() => setOutletOpen(false)}
-                    style={{ position: "fixed", inset: 0, zIndex: 998 }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      marginTop: 6,
-                      width: 250,
-                      background: "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(16px)",
-                      WebkitBackdropFilter: "blur(16px)",
-                      border: "1px solid var(--glass-border)",
-                      borderRadius: 12,
-                      boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-                      padding: 12,
-                      zIndex: 999,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                    }}
-                    className="animate-fade-in-up"
-                  >
-                    {/* Header */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.05em" }}>
-                        SWITCH LOCATION
-                      </span>
-                      <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+          {/* Outlet Switcher */}
+          {showOutletSwitcher && activeOutlet && (
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    background: "var(--bg-elevated)",
+                    border: "1px solid var(--glass-border)",
+                    cursor: hasMultipleOutlets ? "pointer" : "default",
+                    width: "100%",
+                    textAlign: "left",
+                    transition: "all 0.2s ease",
+                  }}
+                  className={hasMultipleOutlets ? "hover:border-[var(--gold)]" : ""}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", overflow: "hidden", minWidth: 0, width: "100%" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%", display: "block" }}>{activeOutlet.name}</span>
+                    <span style={{ fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%", display: "block" }}>{activeOutlet.location || "Unknown Location"}</span>
+                  </div>
+                  {hasMultipleOutlets && <ChevronDown size={14} color="var(--text-muted)" style={{ flexShrink: 0 }} />}
+                </div>
+              </DropdownMenuTrigger>
+              {hasMultipleOutlets && (
+                <DropdownMenuContent 
+                  align="end" 
+                  sideOffset={12}
+                  className="w-[calc(100vw-32px)] sm:w-[380px] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl border border-border/40 shadow-2xl rounded-[24px] sm:rounded-[28px] z-50"
+                  style={{ padding: 0, overflow: 'hidden', maxWidth: 'calc(100vw - 32px)' }}
+                >
+                  <div style={{ padding: "clamp(16px, 4vw, 24px)", width: "100%", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+                    {/* Header Section */}
+                    <div className="flex items-center justify-between" style={{ marginBottom: "20px", width: "100%", gap: "8px" }}>
+                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2" style={{ minWidth: 0, flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Store size={16} className="text-primary shrink-0" />
+                        <span className="truncate">Switch Location</span>
+                      </div>
+                      <span className="text-[10px] font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full whitespace-nowrap shrink-0">
                         {activeOrg?.outlets.length} total
                       </span>
                     </div>
-
-                    {/* Search Input */}
-                    <div style={{ position: "relative" }}>
-                      <Search size={12} color="var(--text-muted)" style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)" }} />
-                      <input
+                    
+                    {/* Search Section */}
+                    <div className="relative group" style={{ marginBottom: "20px", width: "100%" }}>
+                      <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <Input
                         type="text"
                         placeholder="Search outlets..."
                         value={outletSearch}
                         onChange={(e) => setOutletSearch(e.target.value)}
-                        style={{
-                          width: "100%",
-                          height: 28,
-                          borderRadius: 6,
-                          border: "1px solid var(--glass-border)",
-                          background: "var(--bg-elevated)",
-                          paddingLeft: 26,
-                          fontSize: 11,
-                          color: "var(--text-primary)",
-                          outline: "none",
-                        }}
+                        className="h-11 text-sm bg-muted/40 border-border/50 hover:border-primary/40 focus:border-primary rounded-xl transition-all shadow-sm w-full"
+                        style={{ paddingLeft: "40px", minWidth: 0 }}
                       />
                     </div>
-
-                    {/* Current Outlet */}
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", marginBottom: 4 }}>
-                        CURRENT LOCATION
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "6px 8px",
-                          borderRadius: 6,
-                          background: "rgba(139, 92, 246, 0.08)",
-                          border: "1px solid rgba(139, 92, 246, 0.2)",
-                          color: "var(--text-primary)",
-                          fontSize: 12,
-                          fontWeight: 600,
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <MapPin size={12} color="var(--primary)" />
-                          <span>{activeOutlet.name}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 9, background: "#22c55e", color: "#fff", padding: "1px 4px", borderRadius: 4 }}>Active</span>
-                          <Check size={12} color="var(--primary)" />
+                    
+                    {/* Current Location Section */}
+                    <div className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest" style={{ marginBottom: "8px" }}>Current Location</div>
+                    <DropdownMenuItem className="flex flex-col items-start bg-primary/5 focus:bg-primary/10 hover:bg-primary/10 border border-primary/20 cursor-default overflow-hidden rounded-2xl transition-all shadow-sm group w-full" style={{ padding: "clamp(12px, 3vw, 16px)", marginBottom: "20px" }}>
+                      <div className="flex justify-between items-center w-full gap-2" style={{ marginBottom: "8px" }}>
+                        <span className="text-sm font-bold text-foreground truncate" style={{ minWidth: 0, flex: 1 }}>{activeOutlet.name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0 bg-green-500/15 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-full border border-green-500/30">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Active</span>
                         </div>
                       </div>
-                    </div>
+                      <div className="flex items-center gap-2 text-muted-foreground w-full" style={{ minWidth: 0 }}>
+                        <MapPin size={14} className="shrink-0 text-primary/70" />
+                        <span className="text-xs truncate text-left" style={{ minWidth: 0, flex: 1 }}>{activeOutlet.location}</span>
+                      </div>
+                    </DropdownMenuItem>
 
-                    {/* Other Outlets */}
+                    {/* Other Locations Section */}
                     {filteredOutlets.filter((o) => o.id !== activeOutletId).length > 0 && (
-                      <div>
-                        <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", marginBottom: 4 }}>
-                          OTHER LOCATIONS
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 150, overflowY: "auto" }}>
+                      <>
+                        <DropdownMenuSeparator className="opacity-60" style={{ marginBottom: "20px" }} />
+                        <div className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest" style={{ marginBottom: "8px" }}>Other Locations</div>
+                        <div className="w-full space-y-2 custom-scrollbar" style={{ maxHeight: "220px", overflowY: "auto", overflowX: "hidden" }}>
                           {filteredOutlets
                             .filter((o) => o.id !== activeOutletId)
                             .map((outlet) => (
-                              <button
+                              <DropdownMenuItem
                                 key={outlet.id}
+                                onSelect={(e) => {
+                                  switchOutlet(outlet.id);
+                                }}
                                 onClick={() => {
                                   switchOutlet(outlet.id);
-                                  setOutletOpen(false);
-                                  setOutletSearch("");
                                 }}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  padding: "6px 8px",
-                                  borderRadius: 6,
-                                  border: "1px solid transparent",
-                                  background: "transparent",
-                                  width: "100%",
-                                  textAlign: "left",
-                                  cursor: "pointer",
-                                  fontSize: 12,
-                                  color: "var(--text-secondary)",
-                                }}
-                                className="hover:bg-[rgba(139,92,246,0.05)] hover:text-var(--text-primary)"
+                                className="flex flex-col items-start cursor-pointer overflow-hidden w-full rounded-2xl hover:bg-muted/80 focus:bg-muted/80 transition-all border border-transparent hover:border-border/60"
+                                style={{ padding: "clamp(12px, 3vw, 16px)" }}
                               >
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                  <MapPin size={12} />
-                                  <span>{outlet.name}</span>
+                                <span className="text-sm font-semibold text-foreground truncate w-full text-left" style={{ marginBottom: "6px", minWidth: 0 }}>{outlet.name}</span>
+                                <div className="flex items-center gap-2 text-muted-foreground w-full" style={{ minWidth: 0 }}>
+                                  <MapPin size={14} className="shrink-0 opacity-60" />
+                                  <span className="text-xs truncate text-left" style={{ minWidth: 0, flex: 1 }}>{outlet.location}</span>
                                 </div>
-                                <span style={{ fontSize: 9, background: "rgba(34,197,94,0.1)", color: "#22c55e", padding: "1px 4px", borderRadius: 4 }}>Active</span>
-                              </button>
+                              </DropdownMenuItem>
                             ))}
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
-                </>
+                </DropdownMenuContent>
               )}
-            </div>
+            </DropdownMenu>
           )}
         </div>
       )}
 
       {/* Right side actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto", flexShrink: 0 }}>
-        {/* Notification Bell */}
+      <div style={{ display: "flex", alignItems: "center", gap: "clamp(4px, 1.5vw, 10px)", marginLeft: "auto", flexShrink: 0 }}>
+        {/* Mobile Search Icon */}
         <button
-          onClick={() => router.push("/notifications")}
+          className="flex lg:hidden"
+          onClick={() => setIsMobileSearchOpen(true)}
           style={{
             width: 36,
             height: 36,
             borderRadius: "50%",
             border: "1px solid var(--glass-border)",
             background: "var(--bg-elevated)",
-            display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
@@ -333,18 +325,73 @@ export default function Header() {
             flexShrink: 0,
             transition: "all 0.2s ease"
           }}
-          className="hover:bg-[rgba(139,92,246,0.1)] hover:text-[var(--gold)]"
         >
-          <Bell size={16} />
+          <Search size={16} />
         </button>
 
+        {/* Mobile Premium Upgrade Button */}
+        <button 
+          onClick={() => alert("Premium Upgrade feature coming soon!")} 
+          className="flex lg:hidden items-center gap-1 px-2.5 py-1.5 rounded-full shadow-sm cursor-pointer border-none" 
+          style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff", textDecoration: "none", fontSize: "10px", fontWeight: 800, flexShrink: 0 }}
+        >
+          <Crown size={12} />
+          <span>UNLOCK</span>
+        </button>
+
+        {/* Notification Bell */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => router.push("/notifications")}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              border: "1px solid var(--glass-border)",
+              background: "var(--bg-elevated)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "var(--text-secondary)",
+              flexShrink: 0,
+              transition: "all 0.2s ease"
+            }}
+            className="hover:bg-[rgba(139,92,246,0.1)] hover:text-[var(--gold)]"
+          >
+            <Bell size={16} />
+          </button>
+          {notificationsData && notificationsData.summary.unread > 0 && (
+            <div style={{
+              position: "absolute",
+              top: -2,
+              right: -2,
+              minWidth: 16,
+              height: 16,
+              padding: "0 4px",
+              borderRadius: 8,
+              background: "var(--rose)",
+              color: "#fff",
+              fontSize: 10,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid var(--bg-surface)",
+              pointerEvents: "none"
+            }}>
+              {notificationsData.summary.unread > 9 ? "9+" : notificationsData.summary.unread}
+            </div>
+          )}
+        </div>
+
         {/* Divider */}
-        <div style={{ width: 1, height: 28, background: "var(--glass-border)", flexShrink: 0 }} />
+        <div className="hidden sm:block" style={{ width: 1, height: 28, background: "var(--glass-border)", flexShrink: 0 }} />
 
         {/* User info */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "clamp(4px, 1vw, 8px)" }}>
           {/* Name + Phone - hide on very small screens */}
-          <div className="hidden md:block" style={{ textAlign: "right", lineHeight: 1.2 }}>
+          <div className="hidden lg:block" style={{ textAlign: "right", lineHeight: 1.2 }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>
               {customer?.name || "Customer"}
             </p>
@@ -352,27 +399,17 @@ export default function Header() {
           </div>
 
           {/* Avatar */}
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "var(--gold-dim)",
-              border: "2px solid var(--gold)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--gold)",
-              fontWeight: 700,
-              fontSize: 13,
-              flexShrink: 0,
-            }}
-          >
-            {customer?.name ? getInitials(customer.name) : "CP"}
-          </div>
+          <Link href="/profile" title="My Profile" style={{ flexShrink: 0 }}>
+            <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-primary cursor-pointer hover:opacity-80 transition-opacity">
+              <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                {customer?.name ? getInitials(customer.name) : "CP"}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
 
           {/* Logout */}
           <button
+            className="hidden sm:flex"
             onClick={logout}
             title="Logout"
             style={{
@@ -381,7 +418,6 @@ export default function Header() {
               borderRadius: "var(--radius-md)",
               border: "1px solid var(--glass-border)",
               background: "transparent",
-              display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",

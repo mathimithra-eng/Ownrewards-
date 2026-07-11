@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import GlassCard from "../ui/GlassCard";
+import { Card } from "@/components/ui/card";
 import type { RewardChartData } from "@/types";
 import {
   LineChart,
@@ -140,7 +140,7 @@ export default function RewardChart({ data: rawData }: { data: RewardChartData[]
   const avgEarned = Math.round(totalEarned / (data.length || 1));
 
   return (
-    <GlassCard style={{ padding: "24px 28px" }}>
+    <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: "24px 28px" }}>
       {/* Header with toggle */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <h3 className="section-title">Points Overview</h3>
@@ -234,6 +234,6 @@ export default function RewardChart({ data: rawData }: { data: RewardChartData[]
       ) : (
         <StrikeRateGauge totalEarned={totalEarned} totalRedeemed={totalRedeemed} />
       )}
-    </GlassCard>
+    </Card>
   );
 }

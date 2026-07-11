@@ -4,8 +4,8 @@ import React from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { timeAgo } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import GlassCard from "@/components/ui/GlassCard";
-import Badge from "@/components/ui/Badge";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
   Bell,
@@ -23,11 +23,9 @@ import {
 } from "lucide-react";
 
 /* ── Type-specific offer detail panel ── */
-function OfferDetailBanner({ type, title, message }: { type: string; title: string; message: string }) {
+function OfferDetailBanner({ type, title, message, metadata }: { type: string; title: string; message: string; metadata?: Record<string, any> }) {
   if (type === "offer") {
-    // Extract discount number from message if present
-    const discountMatch = message.match(/(\d+)%/);
-    const discount = discountMatch ? discountMatch[1] : null;
+    const discount = metadata?.discount || null;
     return (
       <div style={{
         marginTop: 14,
@@ -72,8 +70,7 @@ function OfferDetailBanner({ type, title, message }: { type: string; title: stri
   }
 
   if (type === "coupon") {
-    const codeMatch = message.match(/[A-Z0-9]{4,}/);
-    const code = codeMatch ? codeMatch[0] : null;
+    const code = metadata?.couponCode || null;
     return (
       <div style={{
         marginTop: 14,
@@ -200,6 +197,15 @@ function NotifIcon({ type }: { type: string }) {
 
 export default function NotificationsPage() {
   const { data, loading, error, refetch, markRead, markAllRead } = useNotifications();
+  const [failedRead, setFailedRead] = React.useState<string | null>(null);
+
+  const handleMarkRead = async (id: string) => {
+    setFailedRead(null);
+    const success = await markRead(id);
+    if (!success) {
+      setFailedRead(id);
+    }
+  };
 
   if (loading) {
     return (
@@ -257,11 +263,11 @@ export default function NotificationsPage() {
       </div>
 
       {data.notifications.length === 0 ? (
-        <GlassCard style={{ padding: 60, textAlign: "center" }}>
+        <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 60, textAlign: "center" }}>
           <Bell size={48} color="var(--text-muted)" style={{ margin: "0 auto 16px", opacity: 0.5 }} />
           <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>All caught up!</h3>
           <p style={{ color: "var(--text-muted)" }}>You have no notifications at this time.</p>
-        </GlassCard>
+        </Card>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
@@ -281,7 +287,7 @@ export default function NotificationsPage() {
                     <div
                       key={notif._id}
                       className="notif-card animate-fade-in-up"
-                      onClick={() => { if (isUnread) markRead(notif._id); }}
+                      onClick={() => { if (isUnread) handleMarkRead(notif._id); }}
                       style={{
                         background: isUnread
                           ? "linear-gradient(135deg, rgba(30,15,60,0.95), rgba(20,10,40,0.98))"
@@ -304,6 +310,12 @@ export default function NotificationsPage() {
                             <h3 style={{ fontSize: 15, fontWeight: isUnread ? 700 : 500, color: isUnread ? "var(--text-primary)" : "var(--text-secondary)", lineHeight: 1.4 }}>
                               {notif.title}
                             </h3>
+                            {failedRead === notif._id && (
+                              <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                                <AlertCircle size={12} />
+                                Couldn't update — tap to retry
+                              </span>
+                            )}
                           </div>
                           <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>{notif.message}</p>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
@@ -312,7 +324,7 @@ export default function NotificationsPage() {
                           </div>
                         </div>
                       </div>
-                      <OfferDetailBanner type={notif.type} title={notif.title} message={notif.message} />
+                      <OfferDetailBanner type={notif.type} title={notif.title} message={notif.message} metadata={notif.metadata} />
                     </div>
                   );
                 })}
@@ -333,10 +345,10 @@ export default function NotificationsPage() {
                 {otherNotifs.map((notif, idx) => {
                   const isUnread = !notif.read;
                   return (
-                    <GlassCard
+                    <Card
                       key={notif._id}
-                      onClick={() => { if (isUnread) markRead(notif._id); }}
-                      className={`notif-card animate-fade-in-up`}
+                      onClick={() => { if (isUnread) handleMarkRead(notif._id); }}
+                      className={`bg-background/60 backdrop-blur-md border-border/50 shadow-sm notif-card animate-fade-in-up`}
                       style={{
                         padding: "16px 20px",
                         animationDelay: `${idx * 50}ms`,
@@ -356,17 +368,25 @@ export default function NotificationsPage() {
                           <h3 style={{ fontSize: 14, fontWeight: isUnread ? 700 : 500, color: isUnread ? "var(--text-primary)" : "var(--text-secondary)" }}>
                             {notif.title}
                           </h3>
-                          <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap", marginLeft: 12, display: "flex", alignItems: "center", gap: 4 }}>
-                            <Clock size={10} /> {timeAgo(notif.date)}
-                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            {failedRead === notif._id && (
+                              <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                                <AlertCircle size={12} />
+                                Retry
+                              </span>
+                            )}
+                            <span style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}>
+                              <Clock size={10} /> {timeAgo(notif.date)}
+                            </span>
+                          </div>
                         </div>
                         <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>{notif.message}</p>
-                        <OfferDetailBanner type={notif.type} title={notif.title} message={notif.message} />
+                        <OfferDetailBanner type={notif.type} title={notif.title} message={notif.message} metadata={notif.metadata} />
                         <div style={{ marginTop: 10 }}>
                           <Badge variant={notif.type as "reward" | "coupon" | "offer" | "purchase" | "system"}>{notif.type}</Badge>
                         </div>
                       </div>
-                    </GlassCard>
+                    </Card>
                   );
                 })}
               </div>

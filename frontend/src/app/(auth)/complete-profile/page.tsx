@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 import { setCustomer } from "@/lib/auth";
-import GlassCard from "@/components/ui/GlassCard";
+import { Card } from "@/components/ui/card";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { User, Mail, Calendar, ArrowRight, AlertCircle } from "lucide-react";
 
@@ -60,7 +60,7 @@ export default function CompleteProfilePage() {
       <div className="orb orb-purple animate-float" style={{ width: 500, height: 500, bottom: "-10%", right: "-10%", animationDuration: "12s", animationDelay: "1s" }} />
 
       <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 480, padding: 24 }}>
-        <GlassCard style={{ padding: "40px 32px", borderRadius: "var(--radius-xl)" }}>
+        <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: "40px 32px", borderRadius: "var(--radius-xl)" }}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <div
               style={{
@@ -177,7 +177,7 @@ export default function CompleteProfilePage() {
               )}
             </button>
           </form>
-        </GlassCard>
+        </Card>
       </div>
     </div>
   );

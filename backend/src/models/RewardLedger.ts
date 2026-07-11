@@ -7,6 +7,8 @@ export interface IRewardLedger extends Document<string> {
   outletId?: string;
   points: number;
   walletBalance?: number;
+  tier?: string;
+  lastVisit?: Date;
 }
 
 const rewardLedgerSchema = new Schema<IRewardLedger>(
@@ -17,6 +19,8 @@ const rewardLedgerSchema = new Schema<IRewardLedger>(
     outletId: { type: String, default: null, index: true },
     points: { type: Number, required: true },
     walletBalance: { type: Number, default: 0 },
+    tier: { type: String },
+    lastVisit: { type: Date }
   }
 );
 

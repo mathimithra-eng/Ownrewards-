@@ -21,11 +21,10 @@ const seedDatabase = async () => {
     });
     console.log('✅ Connected to MongoDB');
 
-    // Clear existing collections by dropping them to remove old indexes
     const collections = await mongoose.connection.db?.collections();
     if (collections) {
       for (let collection of collections) {
-        await collection.drop().catch(() => {}); // ignore errors if it doesn't exist
+        await collection.drop().catch(() => {});
       }
     }
     console.log('🗑️  Dropped existing collections (and indexes)');
@@ -35,28 +34,28 @@ const seedDatabase = async () => {
     const phone = '+919876543210';
 
     // 1. Create Organizations
-    const simmati = await Organization.create({
-      _id: 'simmati',
-      name: 'Simmati',
+    await Organization.create({
+      _id: 'burgerking',
+      name: 'Burger King India',
+      logoUrl: '/logos/burgerking.svg',
+      industry: 'Restaurant',
       isActive: true,
     });
-    const maharaja = await Organization.create({
-      _id: 'maharaja',
-      name: 'Maharaja',
+    
+    await Organization.create({
+      _id: 'lifestyle',
+      name: 'Lifestyle Stores',
+      logoUrl: '/logos/lifestyle.svg',
+      industry: 'Retail',
       isActive: true,
     });
     console.log('🏢 Organizations created');
 
     // 2. Create Outlets
-    // Simmati Outlets
-    await Outlet.create({ _id: 'thiruvarur', organizationId: 'simmati', name: 'Thiruvarur', isActive: true });
-    await Outlet.create({ _id: 'nagapattinam', organizationId: 'simmati', name: 'Nagapattinam', isActive: true });
-    await Outlet.create({ _id: 'simmati_mayiladuthurai', organizationId: 'simmati', name: 'Mayiladuthurai', isActive: true });
-
-    // Maharaja Outlets
-    await Outlet.create({ _id: 'maharaja_thiruvarur', organizationId: 'maharaja', name: 'Thiruvarur', isActive: true });
-    await Outlet.create({ _id: 'mayiladuthurai', organizationId: 'maharaja', name: 'Mayiladuthurai', isActive: true });
-    await Outlet.create({ _id: 'maharaja_karaikal', organizationId: 'maharaja', name: 'Karaikal', isActive: true });
+    await Outlet.create({ _id: 'bk_cp', organizationId: 'burgerking', name: 'Burger King - Connaught Place', location: 'New Delhi', isActive: true });
+    
+    await Outlet.create({ _id: 'lifestyle_moi', organizationId: 'lifestyle', name: 'Lifestyle - Mall of India', location: 'Noida', isActive: true });
+    await Outlet.create({ _id: 'lifestyle_ambience', organizationId: 'lifestyle', name: 'Lifestyle - Ambience Mall', location: 'Gurgaon', isActive: true });
     console.log('📍 Outlets created');
 
     // 3. Create Account & Profile
@@ -72,8 +71,8 @@ const seedDatabase = async () => {
       _id: profileId,
       accountId: accountId,
       name: 'Arun Kumar',
-      tier: 'Gold',
-      walletBalance: 150.00, // kept as global fallback, but we will read per org/outlet
+      tier: 'Gold', // Default profile tier
+      walletBalance: 150.00,
       metrics: {
         totalOrders: 12,
         totalSpend: 14500,
@@ -86,130 +85,97 @@ const seedDatabase = async () => {
     console.log('👤 Profile created');
 
     // 4. Create RewardLedgers (loyalty points + cashback per organization & outlet)
-    // Simmati Outlets
+    // Burger King Ledger
     await RewardLedger.create({
-      _id: 'ledger_simmati_thiruvarur',
+      _id: 'ledger_bk_cp',
       profileId,
-      organizationId: 'simmati',
-      outletId: 'thiruvarur',
+      organizationId: 'burgerking',
+      outletId: 'bk_cp',
       points: 2450,
       walletBalance: 150.00,
+      tier: 'Gold',
+      lastVisit: new Date('2026-06-28T14:30:00.000Z')
     });
+    
+    // Lifestyle Ledgers
     await RewardLedger.create({
-      _id: 'ledger_simmati_nagapattinam',
+      _id: 'ledger_lifestyle_moi',
       profileId,
-      organizationId: 'simmati',
-      outletId: 'nagapattinam',
-      points: 1200,
-      walletBalance: 80.00,
+      organizationId: 'lifestyle',
+      outletId: 'lifestyle_moi',
+      points: 750,
+      walletBalance: 0,
+      tier: 'Silver',
+      lastVisit: new Date('2026-05-15T18:45:00.000Z')
     });
+    
     await RewardLedger.create({
-      _id: 'ledger_simmati_mayiladuthurai',
+      _id: 'ledger_lifestyle_ambience',
       profileId,
-      organizationId: 'simmati',
-      outletId: 'simmati_mayiladuthurai',
-      points: 800,
-      walletBalance: 40.00,
-    });
-
-    // Maharaja Outlets
-    await RewardLedger.create({
-      _id: 'ledger_maharaja_thiruvarur',
-      profileId,
-      organizationId: 'maharaja',
-      outletId: 'maharaja_thiruvarur',
-      points: 1800,
-      walletBalance: 120.00,
-    });
-    await RewardLedger.create({
-      _id: 'ledger_maharaja_mayiladuthurai',
-      profileId,
-      organizationId: 'maharaja',
-      outletId: 'mayiladuthurai',
-      points: 950,
-      walletBalance: 50.00,
-    });
-    await RewardLedger.create({
-      _id: 'ledger_maharaja_karaikal',
-      profileId,
-      organizationId: 'maharaja',
-      outletId: 'maharaja_karaikal',
-      points: 600,
-      walletBalance: 30.00,
+      organizationId: 'lifestyle',
+      outletId: 'lifestyle_ambience',
+      points: 0,
+      walletBalance: 0,
+      tier: 'Bronze',
+      lastVisit: new Date('2025-12-10T14:30:00.000Z')
     });
     console.log('💰 RewardLedgers created');
 
-    // 5. Create Transactions per Organization and Outlet
+    // 5. Create Transactions so the login isn't blocked by Rule 2
     const transactions = [
-      // Simmati - Thiruvarur
       {
-        _id: 'txn_sim_thir_1',
+        _id: "txn_bk_1",
         profileId,
-        organizationId: 'simmati',
-        outletId: 'thiruvarur',
-        type: 'bill_created',
-        title: 'Order #SIM-TH-101',
-        description: 'Dine-in at Simmati Thiruvarur Outlet',
-        createdAt: new Date('2026-06-28T14:30:00.000Z'),
-        billAmount: 1500,
-        pointsImpact: 150,
-        metadata: { items: [{ itemName: 'Paneer Tikka Masala', quantity: 1 }, { itemName: 'Garlic Naan', quantity: 2 }] },
+        organizationId: 'burgerking',
+        outletId: 'bk_cp',
+        type: "bill_created",
+        title: "Order #BK-1024",
+        description: "Dine-in at Connaught Place",
+        createdAt: new Date("2026-06-28T14:30:00.000Z"),
+        billAmount: 550,
+        pointsImpact: 55,
+        metadata: {
+          items: [
+            { itemName: "Veg Whopper Combo", quantity: 1 },
+            { itemName: "Crispy Chicken Burger", quantity: 2 }
+          ]
+        }
       },
       {
-        _id: 'txn_sim_thir_2',
+        _id: "txn_ls_1",
         profileId,
-        organizationId: 'simmati',
-        outletId: 'thiruvarur',
-        type: 'rule_action',
-        title: 'Birthday Bonus',
-        description: 'Happy Birthday from Simmati!',
-        createdAt: new Date('2026-06-25T10:00:00.000Z'),
-        billAmount: null,
-        pointsImpact: 500,
-        metadata: {},
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_moi',
+        type: "bill_created",
+        title: "Order #LS-5521",
+        description: "Shopping at Mall of India",
+        createdAt: new Date("2026-05-15T18:45:00.000Z"),
+        billAmount: 4500,
+        pointsImpact: 450,
+        metadata: {
+          items: [
+            { itemName: "Levis Blue Jeans", quantity: 1 },
+            { itemName: "Puma Sneakers", quantity: 1 }
+          ]
+        }
       },
-      // Simmati - Nagapattinam
       {
-        _id: 'txn_sim_nag_1',
+        _id: "txn_ls_2",
         profileId,
-        organizationId: 'simmati',
-        outletId: 'nagapattinam',
-        type: 'bill_created',
-        title: 'Order #SIM-NG-201',
-        description: 'Takeaway from Simmati Nagapattinam Outlet',
-        createdAt: new Date('2026-06-20T18:00:00.000Z'),
-        billAmount: 800,
-        pointsImpact: 80,
-        metadata: { items: [{ itemName: 'Veg Biryani', quantity: 1 }] },
-      },
-      // Maharaja - Thiruvarur
-      {
-        _id: 'txn_mah_thir_1',
-        profileId,
-        organizationId: 'maharaja',
-        outletId: 'maharaja_thiruvarur',
-        type: 'bill_created',
-        title: 'Order #MAH-TH-401',
-        description: 'Dine-in at Maharaja Thiruvarur Outlet',
-        createdAt: new Date('2026-06-27T19:30:00.000Z'),
-        billAmount: 1200,
-        pointsImpact: 120,
-        metadata: { items: [{ itemName: 'Butter Chicken', quantity: 1 }] },
-      },
-      // Maharaja - Mayiladuthurai
-      {
-        _id: 'txn_mah_may_1',
-        profileId,
-        organizationId: 'maharaja',
-        outletId: 'mayiladuthurai',
-        type: 'bill_created',
-        title: 'Order #MAH-MY-501',
-        description: 'Delivery from Maharaja Mayiladuthurai Outlet',
-        createdAt: new Date('2026-06-15T20:00:00.000Z'),
-        billAmount: 950,
-        pointsImpact: 95,
-        metadata: {},
-      },
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_ambience',
+        type: "bill_created",
+        title: "Order #LS-8890",
+        description: "Shopping at Ambience Mall",
+        createdAt: new Date("2025-12-10T14:30:00.000Z"),
+        billAmount: 2100,
+        pointsImpact: 210,
+        metadata: {
+          items: [
+            { itemName: "Jack & Jones T-Shirt", quantity: 2 }
+          ]
+        }
+      }
     ];
 
     for (const txn of transactions) {
@@ -217,54 +183,41 @@ const seedDatabase = async () => {
     }
     console.log('📝 Transactions created');
 
-    // 6. Create Coupons per Organization and Outlet
+    // 6. Create Coupons
     const coupons = [
-      // Simmati coupons
       {
-        _id: 'coupon_sim_1',
+        _id: 'coupon_bk_summer',
         accountId,
-        organizationId: 'simmati',
-        outletId: 'thiruvarur',
-        couponName: 'Simmati Summer 20% Off',
-        couponCode: 'SIMMATI20',
-        issuedAt: new Date('2026-06-01T00:00:00.000Z'),
-        expiresAt: new Date('2026-07-31T23:59:59.000Z'),
-        status: 'active',
+        organizationId: 'burgerking',
+        outletId: 'bk_cp',
+        couponName: "Free Fries on Orders above ₹300",
+        couponCode: "BKFRIES",
+        issuedAt: new Date("2026-06-01T00:00:00.000Z"),
+        expiresAt: new Date("2026-07-31T23:59:59.000Z"),
+        status: "active",
       },
       {
-        _id: 'coupon_sim_2',
+        _id: 'coupon_ls_moi',
         accountId,
-        organizationId: 'simmati',
-        outletId: 'nagapattinam',
-        couponName: 'Simmati NGT Flat ₹100 Off',
-        couponCode: 'SIMNGT100',
-        issuedAt: new Date('2026-06-05T00:00:00.000Z'),
-        expiresAt: new Date('2026-07-31T23:59:59.000Z'),
-        status: 'active',
-      },
-      // Maharaja coupons
-      {
-        _id: 'coupon_mah_1',
-        accountId,
-        organizationId: 'maharaja',
-        outletId: 'maharaja_thiruvarur',
-        couponName: 'Maharaja Royal ₹200 Off',
-        couponCode: 'MAHARAJA200',
-        issuedAt: new Date('2026-06-10T00:00:00.000Z'),
-        expiresAt: new Date('2026-08-15T23:59:59.000Z'),
-        status: 'active',
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_moi',
+        couponName: "Flat 20% Off on Footwear",
+        couponCode: "SHOES20",
+        issuedAt: new Date("2026-05-01T00:00:00.000Z"),
+        expiresAt: new Date("2026-08-31T23:59:59.000Z"),
+        status: "active",
       },
       {
-        _id: 'coupon_mah_2',
+        _id: 'coupon_ls_amb',
         accountId,
-        organizationId: 'maharaja',
-        outletId: 'mayiladuthurai',
-        couponName: 'Maharaja Mayiladuthurai Special',
-        couponCode: 'MAHMAY15',
-        issuedAt: new Date('2026-06-12T00:00:00.000Z'),
-        expiresAt: new Date('2026-08-31T23:59:59.000Z'),
-        status: 'active',
-      },
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_ambience',
+        couponName: "₹500 Off on Winter Wear",
+        couponCode: "WINTER500",
+        issuedAt: new Date("2025-11-01T00:00:00.000Z"),
+        expiresAt: new Date("2026-01-31T23:59:59.000Z"),
+        status: "expired",
+      }
     ];
 
     for (const cp of coupons) {
@@ -272,28 +225,38 @@ const seedDatabase = async () => {
     }
     console.log('🎫 Coupons created');
 
-    // 7. Create Rewards per Organization and Outlet
+    // 7. Create Rewards
     const rewards = [
       {
-        _id: 'reward_sim_1',
+        _id: 'reward_bk',
         profileId,
-        organizationId: 'simmati',
-        outletId: 'thiruvarur',
-        rewardName: 'Free Simmati Cold Coffee',
-        issuedAt: new Date('2026-06-15T12:00:00.000Z'),
-        expiresAt: new Date('2026-08-15T12:00:00.000Z'),
-        status: 'active',
+        organizationId: 'burgerking',
+        outletId: 'bk_cp',
+        rewardName: "Free Chocolate Shake",
+        issuedAt: new Date("2026-06-15T12:00:00.000Z"),
+        expiresAt: new Date("2026-08-15T12:00:00.000Z"),
+        status: "active",
       },
       {
-        _id: 'reward_mah_1',
+        _id: 'reward_ls_moi',
         profileId,
-        organizationId: 'maharaja',
-        outletId: 'maharaja_thiruvarur',
-        rewardName: 'Free Maharaja Royal Lassi',
-        issuedAt: new Date('2026-06-18T12:00:00.000Z'),
-        expiresAt: new Date('2026-08-18T12:00:00.000Z'),
-        status: 'active',
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_moi',
+        rewardName: "Silver Tier Priority Checkout",
+        issuedAt: new Date("2026-05-15T12:00:00.000Z"),
+        expiresAt: new Date("2027-05-15T12:00:00.000Z"),
+        status: "active",
       },
+      {
+        _id: 'reward_ls_amb',
+        profileId,
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_ambience',
+        rewardName: "Bronze Tier Welcome Gift",
+        issuedAt: new Date("2025-12-10T12:00:00.000Z"),
+        expiresAt: new Date("2026-12-10T12:00:00.000Z"),
+        status: "active",
+      }
     ];
 
     for (const rw of rewards) {
@@ -301,88 +264,90 @@ const seedDatabase = async () => {
     }
     console.log('🏆 Rewards created');
 
-    // 8. Create Top Products per Organization and Outlet
-    await TopProduct.create({
-      _id: 'prod_sim_1',
-      profileId,
-      organizationId: 'simmati',
-      outletId: 'thiruvarur',
-      productName: 'Paneer Tikka Masala',
-      category: 'Main Course',
-      orderCount: 8,
-    });
-    await TopProduct.create({
-      _id: 'prod_mah_1',
-      profileId,
-      organizationId: 'maharaja',
-      outletId: 'maharaja_thiruvarur',
-      productName: 'Butter Chicken',
-      category: 'Main Course',
-      orderCount: 12,
-    });
+    // 8. Create Top Products
+    await TopProduct.create([
+      {
+        _id: 'prod_whopper',
+        profileId,
+        organizationId: 'burgerking',
+        outletId: 'bk_cp',
+        productName: "Veg Whopper",
+        category: "Burgers",
+        orderCount: 15,
+      },
+      {
+        _id: 'prod_jeans',
+        profileId,
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_moi',
+        productName: "Levis Blue Jeans",
+        category: "Clothing",
+        orderCount: 4,
+      },
+      {
+        _id: 'prod_tshirt',
+        profileId,
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_ambience',
+        productName: "Jack & Jones T-Shirt",
+        category: "Clothing",
+        orderCount: 8,
+      }
+    ]);
     console.log('🛒 Top Products created');
 
-    // 9. Create Offers per Organization and Outlet
-    const offers = [
-      {
-        title: 'Simmati Fest: Flat 30% Off',
-        description: 'Enjoy delicious meals at Simmati outlets',
-        discount: 30,
-        discountType: 'percentage',
-        bannerImage: '',
-        featured: true,
-        expiryDate: new Date('2026-08-31T23:59:59.000Z'),
-        terms: ['Valid on Dine-in only'],
-        category: 'food',
-        brand: 'Simmati',
-        isActive: true,
-        organizationId: 'simmati',
-        outletId: 'thiruvarur',
-      },
-      {
-        title: 'Maharaja Feast: Buy 1 Get 1 Free',
-        description: 'On all appetizers at Maharaja Thiruvarur',
-        discount: 50,
-        discountType: 'percentage',
-        bannerImage: '',
-        featured: true,
-        expiryDate: new Date('2026-07-31T23:59:59.000Z'),
-        terms: ['Valid on selective days'],
-        category: 'food',
-        brand: 'Maharaja',
-        isActive: true,
-        organizationId: 'maharaja',
-        outletId: 'maharaja_thiruvarur',
-      },
-    ];
-
-    for (const ofr of offers) {
-      await Offer.create(ofr);
-    }
-    console.log('🎯 Offers created');
-
-    // 10. Create Notifications per Organization and Outlet
+    // 9. Create Notifications
     const notifications = [
       {
         customerId: profileId,
-        organizationId: 'simmati',
-        outletId: 'thiruvarur',
-        type: 'reward',
-        title: 'Points Earned at Simmati!',
-        message: 'You earned 150 points for order #SIM-TH-101.',
-        read: false,
-        date: new Date('2026-06-28T14:35:00.000Z'),
+        organizationId: 'burgerking',
+        outletId: 'bk_cp',
+        type: 'purchase',
+        title: 'Order Completed',
+        message: 'Your order #BK-1024 at Connaught Place was successful. You earned 55 points!',
+        icon: 'ShoppingBag',
+        date: new Date("2026-06-28T14:35:00.000Z"),
       },
       {
         customerId: profileId,
-        organizationId: 'maharaja',
-        outletId: 'maharaja_thiruvarur',
-        type: 'reward',
-        title: 'Points Earned at Maharaja!',
-        message: 'You earned 120 points for order #MAH-TH-401.',
-        read: false,
-        date: new Date('2026-06-27T19:35:00.000Z'),
+        organizationId: 'burgerking',
+        outletId: 'bk_cp',
+        type: 'coupon',
+        title: 'New Coupon Available',
+        message: 'You have received a new coupon: Free Fries on Orders above ₹300.',
+        icon: 'Ticket',
+        date: new Date("2026-06-01T00:05:00.000Z"),
       },
+      {
+        customerId: profileId,
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_moi',
+        type: 'purchase',
+        title: 'Order Completed',
+        message: 'Your shopping at Mall of India was successful. You earned 450 points!',
+        icon: 'ShoppingBag',
+        date: new Date("2026-05-15T18:50:00.000Z"),
+      },
+      {
+        customerId: profileId,
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_moi',
+        type: 'reward',
+        title: 'Reward Unlocked',
+        message: 'Congratulations! You unlocked the Silver Tier Priority Checkout reward.',
+        icon: 'Gift',
+        date: new Date("2026-05-15T12:05:00.000Z"),
+      },
+      {
+        customerId: profileId,
+        organizationId: 'lifestyle',
+        outletId: 'lifestyle_ambience',
+        type: 'purchase',
+        title: 'Order Completed',
+        message: 'Your shopping at Ambience Mall was successful. You earned 210 points!',
+        icon: 'ShoppingBag',
+        date: new Date("2025-12-10T14:35:00.000Z"),
+      }
     ];
 
     for (const notif of notifications) {
@@ -390,7 +355,7 @@ const seedDatabase = async () => {
     }
     console.log('🔔 Notifications created');
 
-    console.log('\n🌱 Database seeded successfully with multi-tenant data!');
+    console.log('\n🌱 Database seeded successfully with user custom data!');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error);

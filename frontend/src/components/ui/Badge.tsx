@@ -1,144 +1,52 @@
-"use client";
+import { mergeProps } from "@base-ui/react/merge-props"
+import { useRender } from "@base-ui/react/use-render"
+import { cva, type VariantProps } from "class-variance-authority"
 
-interface BadgeProps {
-  variant:
-    | "gold"
-    | "silver"
-    | "platinum"
-    | "active"
-    | "expired"
-    | "used"
-    | "earned"
-    | "redeemed"
-    | "upi"
-    | "card"
-    | "cash"
-    | "wallet"
-    | "reward"
-    | "coupon"
-    | "offer"
-    | "purchase"
-    | "system"
-    | "neutral";
-  children: React.ReactNode;
-  className?: string;
-}
+import { cn } from "@/lib/utils"
 
-const variantMap: Record<string, string> = {
-  gold: "badge-gold",
-  silver: "badge-silver",
-  platinum: "badge-platinum",
-  active: "status-active",
-  earned: "status-earned",
-  redeemed: "status-redeemed",
-  expired: "status-expired",
-  used: "status-used",
-};
-
-const inlineVariants: Record<string, React.CSSProperties> = {
-  upi: {
-    background: "rgba(56,189,248,0.15)",
-    color: "#38bdf8",
-    border: "1px solid rgba(56,189,248,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  card: {
-    background: "rgba(124,58,237,0.15)",
-    color: "#a78bfa",
-    border: "1px solid rgba(124,58,237,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  cash: {
-    background: "rgba(16,185,129,0.15)",
-    color: "#10b981",
-    border: "1px solid rgba(16,185,129,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  wallet: {
-    background: "rgba(139,92,246,0.15)",
-    color: "#8b5cf6",
-    border: "1px solid rgba(139,92,246,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  reward: {
-    background: "rgba(16,185,129,0.15)",
-    color: "#10b981",
-    border: "1px solid rgba(16,185,129,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  coupon: {
-    background: "rgba(139,92,246,0.15)",
-    color: "#8b5cf6",
-    border: "1px solid rgba(139,92,246,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  offer: {
-    background: "rgba(124,58,237,0.15)",
-    color: "#a78bfa",
-    border: "1px solid rgba(124,58,237,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  purchase: {
-    background: "rgba(56,189,248,0.15)",
-    color: "#38bdf8",
-    border: "1px solid rgba(56,189,248,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  system: {
-    background: "rgba(100,116,139,0.15)",
-    color: "#94a3b8",
-    border: "1px solid rgba(100,116,139,0.2)",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-  neutral: {
-    background: "rgba(148,163,184,0.1)",
-    color: "#94a3b8",
-    border: "1px solid rgba(148,163,184,0.18)",
-    fontSize: 11,
-    fontWeight: 700,
-    padding: "2px 10px",
-    borderRadius: 99,
-  },
-};
-
-export default function Badge({ variant, children, className = "" }: BadgeProps) {
-  const cssClass = variantMap[variant];
-
-  if (cssClass) {
-    return <span className={`${cssClass} ${className}`}>{children}</span>;
+const badgeVariants = cva(
+  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        secondary:
+          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
+        destructive:
+          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+        outline:
+          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
+        ghost:
+          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
   }
+)
 
-  const inlineStyle = inlineVariants[variant] || {};
-  return (
-    <span style={{ display: "inline-block", ...inlineStyle }} className={className}>
-      {children}
-    </span>
-  );
+function Badge({
+  className,
+  variant = "default",
+  render,
+  ...props
+}: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
+  return useRender({
+    defaultTagName: "span",
+    props: mergeProps<"span">(
+      {
+        className: cn(badgeVariants({ variant }), className),
+      },
+      props
+    ),
+    render,
+    state: {
+      slot: "badge",
+      variant,
+    },
+  })
 }
+
+export { Badge, badgeVariants }

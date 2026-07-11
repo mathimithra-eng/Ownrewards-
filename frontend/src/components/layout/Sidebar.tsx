@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTenant } from "@/contexts/TenantContext";
 import {
   LayoutDashboard,
   Gift,
@@ -27,6 +28,18 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { activeOutlet } = useTenant();
+
+  const getNextTier = (currentTier: string = 'Member') => {
+    const tierOrder = ['Member', 'Bronze', 'Silver', 'Gold', 'Platinum'];
+    const currentIndex = tierOrder.indexOf(currentTier);
+    if (currentIndex >= 0 && currentIndex < tierOrder.length - 1) {
+      return tierOrder[currentIndex + 1];
+    }
+    return null; 
+  };
+
+  const nextTier = activeOutlet ? getNextTier(activeOutlet.tier) : 'Platinum';
 
   return (
     <aside className="sidebar hidden lg:flex">
@@ -82,15 +95,17 @@ export default function Sidebar() {
       </nav>
 
       {/* Decorative Bottom Area */}
-      <div style={{ padding: 24, background: "var(--glass-bg)", borderTop: "1px solid var(--glass-border)", marginTop: "auto" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Sparkles size={20} color="var(--gold)" />
-          <div>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Unlock more</p>
-            <p style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 500 }}>Upgrade to Platinum</p>
+      {nextTier && (
+        <div style={{ padding: 24, background: "var(--glass-bg)", borderTop: "1px solid var(--glass-border)", marginTop: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Sparkles size={20} color="var(--gold)" />
+            <div>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase" }}>Unlock more</p>
+              <p style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 500 }}>Upgrade to {nextTier}</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 }

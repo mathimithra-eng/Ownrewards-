@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import api, { clearApiCache } from "@/lib/api";
+import { useState, useEffect, useCallback, useRef } from "react";
+import api from "@/lib/api";
 import type { NotificationsData } from "@/types";
 import { useTenant } from "@/contexts/TenantContext";
 
@@ -10,71 +10,93 @@ export function useNotifications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { activeOrgId, activeOutletId } = useTenant();
+  const mounted = useRef(true);
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const fetch = useCallback(async (isPolling = false) => {
+    if (!isPolling) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const res = await api.get("/customer/notifications");
+      if (!mounted.current) return;
       const raw: NotificationsData = res.data.data;
-      // Deduplicate by _id in case of stale cache overlap
-      const seen = new Set<string>();
-      const unique = raw.notifications.filter((n) => {
-        if (seen.has(n._id)) return false;
-        seen.add(n._id);
-        return true;
-      });
-      setData({ ...raw, notifications: unique });
+      setData(raw);
     } catch (err: unknown) {
+      if (!mounted.current) return;
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message || "Failed to load notifications");
     } finally {
-      setLoading(false);
+      if (mounted.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   const markRead = useCallback(async (id: string) => {
+    // Optimistic UI update
+    let previousData = data;
+    setData((prev) => {
+      if (!prev) return prev;
+      previousData = prev;
+      return {
+        ...prev,
+        notifications: prev.notifications.map((n) =>
+          n._id === id ? { ...n, read: true } : n
+        ),
+        summary: {
+          ...prev.summary,
+          unread: Math.max(0, prev.summary.unread - 1),
+        },
+      };
+    });
+
     try {
       await api.patch(`/customer/notifications/${id}/read`);
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          notifications: prev.notifications.map((n) =>
-            n._id === id ? { ...n, read: true } : n
-          ),
-          summary: {
-            ...prev.summary,
-            unread: Math.max(0, prev.summary.unread - 1),
-          },
-        };
-      });
+      return true;
     } catch {
-      // silently fail
+      // Revert on failure
+      setData(previousData);
+      return false;
     }
-  }, []);
+  }, [data]);
 
   const markAllRead = useCallback(async () => {
+    let previousData = data;
+    setData((prev) => {
+      if (!prev) return prev;
+      previousData = prev;
+      return {
+        ...prev,
+        notifications: prev.notifications.map((n) => ({ ...n, read: true })),
+        summary: { ...prev.summary, unread: 0 },
+      };
+    });
+
     try {
       await api.patch("/customer/notifications/read-all");
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          notifications: prev.notifications.map((n) => ({ ...n, read: true })),
-          summary: { ...prev.summary, unread: 0 },
-        };
-      });
     } catch {
-      // silently fail
+      setData(previousData);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
-    // Clear stale cache so we always get fresh notifications
-    clearApiCache();
     fetch();
+
+    // Poll for new notifications every 60 seconds
+    const interval = setInterval(() => {
+      fetch(true);
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [fetch, activeOrgId, activeOutletId]);
 
-  return { data, loading, error, refetch: fetch, markRead, markAllRead };
+  return { data, loading, error, refetch: () => fetch(false), markRead, markAllRead };
 }

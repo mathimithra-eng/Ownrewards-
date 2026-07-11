@@ -3,6 +3,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ITopProduct extends Document<string> {
   _id: string;
   profileId: string;
+  organizationId: string;
+  outletId?: string;
   productName: string;
   category: string;
   orderCount: number;
@@ -12,6 +14,8 @@ const topProductSchema = new Schema<ITopProduct>(
   {
     _id: { type: String, required: true },
     profileId: { type: String, ref: 'Profile', required: true, index: true },
+    organizationId: { type: String, required: true },
+    outletId: { type: String, default: null },
     productName: { type: String, required: true },
     category: { type: String, required: true },
     orderCount: { type: Number, default: 0 },

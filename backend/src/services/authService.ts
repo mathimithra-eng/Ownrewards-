@@ -5,6 +5,8 @@ import { Account } from '../models/Account';
 import { Profile } from '../models/Profile';
 import { Session } from '../models/Session';
 import { RewardLedger } from '../models/RewardLedger';
+import { Transaction } from '../models/Transaction';
+import { Offer } from '../models/Offer';
 import { SMSService } from './smsService';
 import { CONSTANTS } from '../utils/constants';
 
@@ -12,8 +14,35 @@ export class AuthService {
   // ─────────────────────────────────────────
   // Send OTP
   // ─────────────────────────────────────────
-  static async sendOTP(phone: string): Promise<{ success: boolean; message: string }> {
+  static async sendOTP(phone: string): Promise<{ success: boolean; message: string; status?: number }> {
     const existingAccount = await Account.findOne({ phoneNo: phone });
+    
+    // Perform Rule 2 check: No transactions and no offers -> 403
+    let uniqueOrgs = new Set<string>();
+    let hasTransactions = false;
+    let hasOffers = false;
+
+    if (existingAccount) {
+      const profile = await Profile.findOne({ accountId: existingAccount._id });
+      if (profile) {
+        const ledgers = await RewardLedger.find({ profileId: profile._id });
+        uniqueOrgs = new Set(ledgers.map(l => l.organizationId));
+        hasTransactions = !!(await Transaction.exists({ profileId: profile._id }));
+      }
+    }
+
+    if (uniqueOrgs.size > 0) {
+      hasOffers = !!(await Offer.exists({ organizationId: { $in: Array.from(uniqueOrgs) }, isActive: true }));
+    }
+
+    if (!hasTransactions && !hasOffers) {
+      return { 
+        success: false, 
+        status: 403, 
+        message: 'No active offers or transactions found for this account.' 
+      };
+    }
+
     await OTP.deleteMany({ phone });
 
     const otpCode = SMSService.generateOTP();

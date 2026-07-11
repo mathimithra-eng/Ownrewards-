@@ -2,12 +2,14 @@
 
 import React from "react";
 import { useAuth } from "@/hooks/useAuth";
-import GlassCard from "@/components/ui/GlassCard";
-import { User, Mail, Calendar, Phone, Award, Clock } from "lucide-react";
+import { useTenant } from "@/contexts/TenantContext";
+import { Card } from "@/components/ui/card";
+import { User, Mail, Calendar, Phone, Award, Clock, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 export default function ProfilePage() {
   const { customer } = useAuth();
+  const { activeOutlet, activeOrg } = useTenant();
 
   if (!customer) return null;
 
@@ -22,7 +24,7 @@ export default function ProfilePage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
         {/* Personal Details */}
-        <GlassCard style={{ padding: 32 }}>
+        <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 32 }}>
           <h2 className="section-title" style={{ marginBottom: 24, fontSize: 18 }}>Personal Information</h2>
           
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -68,10 +70,10 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-        </GlassCard>
+        </Card>
 
         {/* Membership Details */}
-        <GlassCard style={{ padding: 32, background: "linear-gradient(135deg, rgba(255,255,255,0.02), rgba(240,180,41,0.05))" }}>
+        <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 32, background: "linear-gradient(135deg, rgba(255,255,255,0.02), rgba(240,180,41,0.05))" }}>
           <h2 className="section-title" style={{ marginBottom: 24, fontSize: 18 }}>Membership & Rewards</h2>
           
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -81,7 +83,9 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Membership Tier</p>
-                <p style={{ fontSize: 18, color: "var(--gold)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{customer.membership}</p>
+                <p style={{ fontSize: 18, color: "var(--gold)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {activeOutlet?.tier || "MEMBER"}
+                </p>
               </div>
             </div>
 
@@ -97,18 +101,35 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <MapPin size={20} color="var(--gold)" />
+              </div>
+              <div>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Current Outlet</p>
+                <p style={{ fontSize: 16, color: "var(--text-primary)", fontWeight: 600 }}>
+                  {activeOutlet?.name || "None"}
+                </p>
+                {activeOrg && (
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{activeOrg.name}</p>
+                )}
+              </div>
+            </div>
+
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8, paddingTop: 24, borderTop: "1px solid var(--glass-border)" }}>
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Available Rewards</p>
-                <p style={{ fontSize: 24, color: "var(--text-primary)", fontWeight: 800 }}>{(customer.rewardPoints || 0).toLocaleString()} <span style={{ fontSize: 14, color: "var(--gold)", fontWeight: 600 }}>pts</span></p>
+                <p style={{ fontSize: 24, color: "var(--text-primary)", fontWeight: 800 }}>{(activeOutlet?.points || 0).toLocaleString()} <span style={{ fontSize: 14, color: "var(--gold)", fontWeight: 600 }}>pts</span></p>
               </div>
               <div style={{ flex: 1, paddingLeft: 16, borderLeft: "1px solid var(--glass-border)" }}>
-                <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Wallet Balance</p>
-                <p style={{ fontSize: 24, color: "var(--text-primary)", fontWeight: 800 }}>₹{(customer.walletBalance || 0).toLocaleString()}</p>
+                <p style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500, marginBottom: 4 }}>Last Visit</p>
+                <p style={{ fontSize: 18, color: "var(--text-primary)", fontWeight: 700 }}>
+                  {activeOutlet?.lastVisit ? format(new Date(activeOutlet.lastVisit), "dd MMM yyyy") : "No visits yet"}
+                </p>
               </div>
             </div>
           </div>
-        </GlassCard>
+        </Card>
       </div>
     </div>
   );

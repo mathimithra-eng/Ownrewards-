@@ -10,24 +10,40 @@ import { Phone, ArrowRight, ShieldCheck, Store, MapPin } from "lucide-react";
 import api from "@/lib/api";
 
 interface Outlet {
-  id: string;
-  name: string;
+  outletId: string;
+  outletName: string;
+  location: string;
+  customerId: string;
+  tier: string;
+  points: number;
+  lastVisit: string;
 }
 
 interface Organization {
-  id: string;
-  name: string;
+  organizationId: string;
+  organizationName: string;
+  logoUrl: string;
+  industry: string;
+  totalOrgPoints: number;
   outlets: Outlet[];
 }
 
 export default function LoginPage() {
   const [phone, setPhone] = useState("");
-  const [step, setStep] = useState<"phone" | "otp" | "organization">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "organization" | "outlet">("phone");
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [testOtp, setTestOtp] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
   const { sendOTP, verifyOTP, loading, error } = useAuth();
   const router = useRouter();
+
+  React.useEffect(() => {
+    if (countdown > 0 && step === "otp") {
+      const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown, step]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +57,16 @@ export default function LoginPage() {
       setPhone(formattedPhone);
       setTestOtp(null);
       setStep("otp");
+      setCountdown(60);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (countdown > 0) return;
+    const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+    const success = await sendOTP(formattedPhone);
+    if (success) {
+      setCountdown(60);
     }
   };
 
@@ -66,44 +92,50 @@ export default function LoginPage() {
       try {
         const res = await api.get("/customer/organizations");
         if (res.data.success && res.data.data) {
-          const orgsList: Organization[] = res.data.data;
+          const orgsList: Organization[] = res.data.data.organizations || res.data.data;
           setOrganizations(orgsList);
           
           if (orgsList.length === 1) {
-            setSelectedOrgId(orgsList[0].id);
+            setSelectedOrgId(orgsList[0].organizationId);
+            localStorage.setItem("selectedOrganizationId", orgsList[0].organizationId);
             if (orgsList[0].outlets.length > 0) {
-              localStorage.setItem("selectedOrganizationId", orgsList[0].id);
-              localStorage.setItem("selectedOutletId", orgsList[0].outlets[0].id);
-              router.push("/dashboard");
+              localStorage.setItem("selectedOutletId", orgsList[0].outlets[0].outletId);
             } else {
-              localStorage.setItem("selectedOrganizationId", orgsList[0].id);
               localStorage.removeItem("selectedOutletId");
-              router.push("/dashboard");
             }
-          } else {
+            router.push("/dashboard");
+          } else if (orgsList.length > 1) {
             setStep("organization");
+          } else {
+            alert("No organizations assigned to this user. Please contact support.");
           }
         } else {
-          router.push("/dashboard");
+          alert("Failed to load organizations. Please try logging in again.");
         }
       } catch (err) {
         console.error("Failed to fetch organizations:", err);
-        router.push("/dashboard");
+        alert("Server error while fetching organizations. Please try again.");
       }
     }
   };
 
   const handleSelectOrg = (org: Organization) => {
-    setSelectedOrgId(org.id);
+    setSelectedOrgId(org.organizationId);
+    localStorage.setItem("selectedOrganizationId", org.organizationId);
     if (org.outlets.length > 0) {
-      localStorage.setItem("selectedOrganizationId", org.id);
-      localStorage.setItem("selectedOutletId", org.outlets[0].id);
-      router.push("/dashboard");
+      localStorage.setItem("selectedOutletId", org.outlets[0].outletId);
     } else {
-      localStorage.setItem("selectedOrganizationId", org.id);
       localStorage.removeItem("selectedOutletId");
-      router.push("/dashboard");
     }
+    router.push("/dashboard");
+  };
+
+  const handleSelectOutlet = (outlet: Outlet) => {
+    if (selectedOrgId) {
+      localStorage.setItem("selectedOrganizationId", selectedOrgId);
+    }
+    localStorage.setItem("selectedOutletId", outlet.outletId);
+    router.push("/dashboard");
   };
 
   return (
@@ -192,6 +224,14 @@ export default function LoginPage() {
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 24 }}>
                   <button
+                    onClick={handleResendOTP}
+                    disabled={countdown > 0 || loading}
+                    className="btn-ghost"
+                    style={{ fontSize: 14 }}
+                  >
+                    {countdown > 0 ? `Resend OTP in ${countdown}s` : "Resend OTP"}
+                  </button>
+                  <button
                     onClick={() => setStep("phone")}
                     disabled={loading}
                     className="btn-ghost"
@@ -234,7 +274,7 @@ export default function LoginPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {organizations.map(org => (
                     <button
-                      key={org.id}
+                      key={org.organizationId}
                       onClick={() => handleSelectOrg(org)}
                       style={{
                         display: "flex",
@@ -248,13 +288,71 @@ export default function LoginPage() {
                       }}
                       className="hover:border-[var(--gold)]"
                     >
-                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--gold-dim)", display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
-                        <Store size={20} color="var(--gold)" />
-                      </div>
+                      {org.logoUrl ? (
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16, overflow: "hidden" }}>
+                           <img src={org.logoUrl} alt={org.organizationName} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        </div>
+                      ) : (
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--gold-dim)", display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+                          <Store size={20} color="var(--gold)" />
+                        </div>
+                      )}
+                      
                       <div style={{ flex: 1, textAlign: "left" }}>
-                        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)" }}>{org.name}</div>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)" }}>{org.organizationName}</div>
+                        {org.industry && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{org.industry} • {org.totalOrgPoints} pts</div>}
                       </div>
                       <div style={{ fontSize: 12, background: "rgba(34,197,94,0.1)", color: "#22c55e", padding: "2px 8px", borderRadius: 12, fontWeight: 600 }}>Active</div>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            ) : step === "outlet" ? (
+              <motion.div
+                key="outlet"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", marginBottom: 24 }}>
+                  <button 
+                    onClick={() => setStep("organization")}
+                    style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", padding: "8px", marginRight: "8px" }}
+                  >
+                    ← Back
+                  </button>
+                  <div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", textAlign: "left" }}>Select Outlet</h2>
+                    <p style={{ color: "var(--text-secondary)", fontSize: 14, textAlign: "left" }}>
+                      Choose your preferred location
+                    </p>
+                  </div>
+                </div>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {organizations.find(o => o.organizationId === selectedOrgId)?.outlets.map(outlet => (
+                    <button
+                      key={outlet.outletId}
+                      onClick={() => handleSelectOutlet(outlet)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "16px",
+                        background: "var(--bg-elevated)",
+                        border: "1px solid var(--glass-border)",
+                        borderRadius: "var(--radius-lg)",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease"
+                      }}
+                      className="hover:border-[var(--gold)]"
+                    >
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(139, 92, 246, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+                        <MapPin size={20} color="#8b5cf6" />
+                      </div>
+                      <div style={{ flex: 1, textAlign: "left" }}>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)" }}>{outlet.outletName}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{outlet.location} • {outlet.points} pts • {outlet.tier} Tier</div>
+                      </div>
                     </button>
                   ))}
                 </div>

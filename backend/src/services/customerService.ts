@@ -7,6 +7,7 @@ import { RewardLedger } from '../models/RewardLedger';
 import { TopProduct } from '../models/TopProduct';
 import { Offer } from '../models/Offer';
 import { Notification } from '../models/Notification';
+import { Organization } from '../models/Organization';
 
 export class CustomerService {
   // ─────────────────────────────────────────
@@ -208,10 +209,16 @@ export class CustomerService {
     if (organizationId) query.organizationId = organizationId;
     if (outletId) query.outletId = outletId;
 
-    const [profile, transactions] = await Promise.all([
+    const [profile, transactions, orgs] = await Promise.all([
       Profile.findOne({ _id: profileId }).select('metrics'),
-      Transaction.find(query).sort({ createdAt: -1 })
+      Transaction.find(query).sort({ createdAt: -1 }),
+      Organization.find({})
     ]);
+
+    const orgMap = orgs.reduce((acc, org) => {
+      acc[org._id] = org.name;
+      return acc;
+    }, {} as Record<string, string>);
 
     let totalPurchases = transactions.length;
     let totalAmount = 0;
@@ -228,8 +235,8 @@ export class CustomerService {
         _id: t._id,
         customerId: profileId,
         invoiceNumber: t._id,
-        storeName: organizationId ? (organizationId === 'simmati' ? 'Simmati Store' : 'Maharaja Store') : 'OwnRewards Store',
-        storeLocation: outletId || 'Online',
+        storeName: orgMap[t.organizationId] || 'OwnRewards Store',
+        storeLocation: t.outletId || 'Online',
         items: t.metadata?.items || [],
         amount,
         rewardEarned: earned,
@@ -354,6 +361,7 @@ export class CustomerService {
         type: n.type || 'system',
         title: n.title,
         message: n.message,
+        metadata: n.metadata || {},
         read: n.read,
         date: n.createdAt
       };

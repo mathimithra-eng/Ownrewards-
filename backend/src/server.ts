@@ -24,15 +24,15 @@ app.use(morgan(env.nodeEnv === 'development' ? 'dev' : 'combined'));
 app.use('/api', globalRateLimiter);
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Routes
+// Routes – all endpoints are mounted under the `/api` prefix
 app.use('/api/auth', authRoutes);
 app.use('/api/customer', customerRoutes);
 
-// Handle 404
+// Handle 404 – any request not matching the above will return this JSON response
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });

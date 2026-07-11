@@ -3,7 +3,7 @@ import { CustomerService } from '../services/customerService';
 import { ApiResponse } from '../utils/apiResponse';
 import { asyncHandler } from '../middlewares/errorHandler';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import { Organization, Outlet } from '../models';
+import { Organization, Outlet, RewardLedger } from '../models';
 
 export class CustomerController {
   // ─────────────────────────────────────────
@@ -117,22 +117,61 @@ export class CustomerController {
   // GET /api/customer/organizations
   // ─────────────────────────────────────────
   static getOrganizations = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const profileId = req.customer!.profileId;
+
+    // Get all ledgers for this profile to find their orgs/outlets
+    const ledgers = await RewardLedger.find({ profileId });
+    const uniqueOrgIds = Array.from(new Set(ledgers.map(l => l.organizationId)));
+    const uniqueOutletIds = Array.from(new Set(ledgers.map(l => l.outletId)));
+
     const [organizations, outlets] = await Promise.all([
-      Organization.find({ isActive: true }),
-      Outlet.find({ isActive: true }),
+      Organization.find({ _id: { $in: uniqueOrgIds }, isActive: true }),
+      Outlet.find({ _id: { $in: uniqueOutletIds }, isActive: true }),
     ]);
 
-    const mapped = organizations.map(org => {
+    let totalOrganizations = organizations.length;
+    let totalOutlets = 0;
+
+    const mappedOrgs = organizations.map(org => {
+      // Find ledgers belonging to this org
+      const orgLedgers = ledgers.filter(l => l.organizationId === org._id);
+      
       const orgOutlets = outlets
         .filter(o => o.organizationId === org._id)
-        .map(o => ({ id: o._id, name: o.name }));
+        .map(o => {
+          totalOutlets++;
+          const ledger = orgLedgers.find(l => l.outletId === o._id);
+          return {
+            outletId: o._id,
+            outletName: o.name,
+            location: o.location || '',
+            customerId: profileId,
+            tier: ledger ? ledger.tier : 'Member',
+            points: ledger ? ledger.points : 0,
+            lastVisit: ledger && ledger.lastVisit ? ledger.lastVisit.toISOString() : null
+          };
+        });
+        
+      const totalOrgPoints = orgLedgers.reduce((acc, curr) => acc + curr.points, 0);
+
       return {
-        id: org._id,
-        name: org.name,
+        organizationId: org._id,
+        organizationName: org.name,
+        logoUrl: org.logoUrl || '',
+        industry: org.industry || '',
+        totalOrgPoints,
         outlets: orgOutlets,
       };
     });
 
-    ApiResponse.success(res, 'Organizations and outlets fetched successfully', mapped);
+    const responseData = {
+      summary: {
+        totalOrganizations,
+        totalOutlets
+      },
+      organizations: mappedOrgs
+    };
+
+    ApiResponse.success(res, 'Organizations and outlets fetched successfully', responseData);
   });
 }

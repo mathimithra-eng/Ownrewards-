@@ -2,7 +2,7 @@
 
 import React from "react";
 import { formatPoints, formatDate } from "@/lib/utils";
-import Badge from "../ui/Badge";
+import { Badge } from "@/components/ui/badge";
 import type { Reward } from "@/types";
 
 export default function RewardTimeline({ transactions }: { transactions: Reward[] }) {

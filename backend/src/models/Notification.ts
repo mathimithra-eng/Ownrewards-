@@ -11,6 +11,7 @@ export interface INotification extends Document {
   icon: string;
   read: boolean;
   actionUrl: string;
+  metadata?: Record<string, any>;
   date: Date;
   createdAt: Date;
 }
@@ -48,6 +49,10 @@ const notificationSchema = new Schema<INotification>(
     actionUrl: {
       type: String,
       default: '',
+    },
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {},
     },
     date: {
       type: Date,

@@ -1,23 +1,18 @@
-/**
- * Format a number as Indian currency
- * e.g. 12500 → "₹12,500"
- */
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
 export const formatCurrency = (amount: number): string => {
   return `₹${amount.toLocaleString("en-IN")}`;
 };
 
-/**
- * Format reward points with comma separator
- * e.g. 12850 → "12,850 pts"
- */
 export const formatPoints = (points: number): string => {
   return `${points.toLocaleString("en-IN")} pts`;
 };
 
-/**
- * Format a date string to a readable format
- * e.g. "2024-06-12T10:00:00Z" → "12 Jun 2024"
- */
 export const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr);
   return date.toLocaleDateString("en-IN", {
@@ -27,10 +22,6 @@ export const formatDate = (dateStr: string): string => {
   });
 };
 
-/**
- * Format a date as short month/year
- * e.g. "Jan 2024"
- */
 export const formatMonthYear = (dateStr: string): string => {
   const date = new Date(dateStr);
   return date.toLocaleDateString("en-IN", {
@@ -39,10 +30,6 @@ export const formatMonthYear = (dateStr: string): string => {
   });
 };
 
-/**
- * Returns relative time string
- * e.g. "2 hours ago", "3 days ago"
- */
 export const timeAgo = (dateStr: string): string => {
   const date = new Date(dateStr);
   const now = new Date();
@@ -60,10 +47,6 @@ export const timeAgo = (dateStr: string): string => {
   return "Just now";
 };
 
-/**
- * Get days remaining until a date
- * Returns negative if expired
- */
 export const daysUntil = (dateStr: string): number => {
   const date = new Date(dateStr);
   const now = new Date();
@@ -71,9 +54,6 @@ export const daysUntil = (dateStr: string): number => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
-/**
- * Capitalize first letter of each word
- */
 export const titleCase = (str: string): string => {
   return str
     .toLowerCase()
@@ -82,17 +62,11 @@ export const titleCase = (str: string): string => {
     .join(" ");
 };
 
-/**
- * Truncate string with ellipsis
- */
 export const truncate = (str: string, maxLen: number): string => {
   if (str.length <= maxLen) return str;
   return str.slice(0, maxLen) + "…";
 };
 
-/**
- * Get membership color
- */
 export const getMembershipColor = (membership: string): string => {
   switch (membership?.toLowerCase()) {
     case "gold":
@@ -105,10 +79,6 @@ export const getMembershipColor = (membership: string): string => {
   }
 };
 
-/**
- * Get initials from a full name
- * e.g. "R. Mathi Mithra" → "RM"
- */
 export const getInitials = (name: string): string => {
   return name
     .split(" ")

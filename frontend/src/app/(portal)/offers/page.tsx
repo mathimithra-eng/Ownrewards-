@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { useOffers } from "@/hooks/useOffers";
 import { formatDate } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import Badge from "@/components/ui/Badge";
 import { AlertCircle, Sparkles, Tag, ChevronRight, Zap } from "lucide-react";
 
 /* ── brand → offer card config ── */

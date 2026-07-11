@@ -7,8 +7,9 @@ import { formatCurrency, formatPoints, formatDate } from "@/lib/utils";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
 import RecentActivity from "@/components/dashboard/RecentActivity";
-import GlassCard from "@/components/ui/GlassCard";
-import Badge from "@/components/ui/Badge";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import ScratchCard from "@/components/ui/ScratchCard";
 import {
   Coins, Wallet, ShoppingBag, CalendarClock, AlertCircle,
   ChevronRight, Ticket, Gift, TrendingUp,
@@ -197,7 +198,7 @@ export default function DashboardPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 24, animation: "fadeInUp 0.5s var(--ease-smooth) 600ms both" }}>
 
           {/* Active Coupons */}
-          <GlassCard style={{ padding: 0, overflow: "hidden" }}>
+          <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 0, overflow: "hidden" }}>
             <SectionHeader
               title="Active Coupons"
               href="/coupons"
@@ -216,9 +217,14 @@ export default function DashboardPage() {
                       onMouseLeave={e => (e.currentTarget.style.background = "rgba(139,92,246,0.08)")}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: "var(--gold)", letterSpacing: "0.1em", display: "flex", alignItems: "center", gap: 6 }}>
-                          <Ticket size={14} /> {coupon.couponCode}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <Ticket size={14} color="var(--gold)" />
+                          <ScratchCard width={120} height={24}>
+                            <span style={{ fontSize: 16, fontWeight: 800, color: "var(--gold)", letterSpacing: "0.1em" }}>
+                              {coupon.couponCode}
+                            </span>
+                          </ScratchCard>
+                        </div>
                         <span style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: 13 }}>{coupon.couponName}</span>
                       </div>
                       <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
@@ -229,10 +235,10 @@ export default function DashboardPage() {
                 ))
               )}
             </div>
-          </GlassCard>
+          </Card>
 
           {/* Active Rewards */}
-          <GlassCard style={{ padding: 0, overflow: "hidden" }}>
+          <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 0, overflow: "hidden" }}>
             <SectionHeader title="Active Rewards" href="/rewards" />
             <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
               {data.activeRewards.length === 0 ? (
@@ -257,10 +263,10 @@ export default function DashboardPage() {
                 ))
               )}
             </div>
-          </GlassCard>
+          </Card>
 
           {/* Top Products */}
-          <GlassCard style={{ padding: 0, overflow: "hidden" }}>
+          <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 0, overflow: "hidden" }}>
             <SectionHeader title="Your Top Products" href="/purchases" />
             <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
               {data.topProducts.length === 0 ? (
@@ -285,7 +291,7 @@ export default function DashboardPage() {
                 ))
               )}
             </div>
-          </GlassCard>
+          </Card>
 
         </div>
       </div>

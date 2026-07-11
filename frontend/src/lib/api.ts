@@ -2,11 +2,8 @@ import axios from "axios";
 import { getToken, removeToken } from "./auth";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
-  timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // Base URL
+  baseURL: "http://localhost:5000/api",
 });
 
 // Request interceptor — attach JWT token and tenant context
@@ -50,6 +47,11 @@ const cache = new Map<string, { data: any; timestamp: number }>();
 
 const originalGet = api.get;
 api.get = async (url: string, config?: any) => {
+  // Never cache notifications to prevent stale duplicates and reload wiping
+  if (url.includes('/notifications')) {
+    return originalGet.call(api, url, config);
+  }
+
   const cacheKey = url + (config ? JSON.stringify(config) : "");
   if (cache.has(cacheKey)) {
     const cached = cache.get(cacheKey)!;

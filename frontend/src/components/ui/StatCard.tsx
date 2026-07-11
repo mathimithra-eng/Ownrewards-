@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import GlassCard from "./GlassCard";
+import { Card } from "@/components/ui/card";
 
 interface StatCardProps {
   label: string;
@@ -21,8 +21,7 @@ export default function StatCard({
   delay = 0,
 }: StatCardProps) {
   return (
-    <GlassCard
-      className="animate-fade-in-up"
+    <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm animate-fade-in-up"
       style={{
         padding: "20px 24px",
         animationDelay: `${delay}ms`,
@@ -83,6 +82,6 @@ export default function StatCard({
           {icon}
         </div>
       </div>
-    </GlassCard>
+    </Card>
   );
 }

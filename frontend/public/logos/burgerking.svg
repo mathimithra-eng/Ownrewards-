@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <path d="M 20,70 C 20,-10 180,-10 180,70 Z" fill="#FF7F00"/>
+  <text x="100" y="100" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="34" fill="#FF0000" text-anchor="middle" dominant-baseline="middle">BURGER</text>
+  <text x="100" y="135" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="34" fill="#FF0000" text-anchor="middle" dominant-baseline="middle">KING</text>
+  <path d="M 25,155 C 25,220 175,220 175,155 Z" fill="#FF7F00"/>
+</svg>

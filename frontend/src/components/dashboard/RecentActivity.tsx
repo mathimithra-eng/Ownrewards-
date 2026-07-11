@@ -2,21 +2,21 @@
 
 import React from "react";
 import { Gift, ShoppingBag } from "lucide-react";
-import GlassCard from "../ui/GlassCard";
+import { Card } from "@/components/ui/card";
 import { timeAgo, formatCurrency } from "@/lib/utils";
 import type { Dashboard } from "@/types";
 
 export default function RecentActivity({ activities }: { activities: Dashboard["transactionHistory"] }) {
   if (!activities || activities.length === 0) {
     return (
-      <GlassCard style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
+      <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 24, textAlign: "center", color: "var(--text-muted)" }}>
         No recent activity
-      </GlassCard>
+      </Card>
     );
   }
 
   return (
-    <GlassCard style={{ padding: 0, overflow: "hidden" }}>
+    <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm" style={{ padding: 0, overflow: "hidden" }}>
       <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--glass-border)" }}>
         <h3 className="section-title">Recent Activity</h3>
       </div>
@@ -96,6 +96,6 @@ export default function RecentActivity({ activities }: { activities: Dashboard["
           );
         })}
       </div>
-    </GlassCard>
+    </Card>
   );
 }

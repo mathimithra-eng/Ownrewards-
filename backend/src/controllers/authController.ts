@@ -14,7 +14,11 @@ export class AuthController {
     const result = await AuthService.sendOTP(phone);
 
     if (!result.success) {
-      ApiResponse.badRequest(res, result.message);
+      if (result.status === 403) {
+        ApiResponse.forbidden(res, result.message);
+      } else {
+        ApiResponse.badRequest(res, result.message);
+      }
       return;
     }
 
