@@ -174,4 +174,33 @@ export class CustomerController {
 
     ApiResponse.success(res, 'Organizations and outlets fetched successfully', responseData);
   });
+
+  // ─────────────────────────────────────────
+  // POST /api/customer/feedback
+  // ─────────────────────────────────────────
+  static submitFeedback = asyncHandler(async (req: any, res: Response): Promise<void> => {
+    const profileId = req.customer!.profileId;
+    const { organizationId, outletId } = req;
+    
+    let fileMetadata;
+    if (req.file) {
+      fileMetadata = {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path
+      };
+    }
+
+    const feedback = await CustomerService.submitFeedback(
+      profileId,
+      organizationId,
+      outletId,
+      req.body,
+      fileMetadata
+    );
+
+    ApiResponse.success(res, 'Feedback submitted successfully', feedback);
+  });
 }

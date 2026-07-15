@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import type { Dashboard } from "@/types";
 
 export default function WelcomeBanner({ customer }: { customer: Dashboard["summary"]["customer"] }) {
@@ -14,36 +13,51 @@ export default function WelcomeBanner({ customer }: { customer: Dashboard["summa
   };
 
   const getTierStyles = (tier: string) => {
-    const t = tier.toLowerCase();
+    const t = (tier || "Member").toLowerCase();
+    
+    const base = {
+      textColor: "#ffffff",
+      textMuted: "rgba(255, 255, 255, 0.85)",
+      overlay: "rgba(0, 0, 0, 0.65)",
+    };
+
     if (t === 'silver') {
       return {
-        filter: "grayscale(100%) brightness(1.2) contrast(1.1)",
-        shadow: "drop-shadow(0 8px 20px rgba(148,163,184,0.4))"
+        ...base,
+        tintColor: "#C0C0C0", // Accurate Silver
+        badgeClass: "badge-silver",
+        borderAccent: "rgba(192, 192, 192, 0.5)",
       };
     }
     if (t === 'bronze') {
       return {
-        filter: "sepia(100%) hue-rotate(345deg) saturate(150%) brightness(0.65)",
-        shadow: "drop-shadow(0 8px 20px rgba(180,83,9,0.4))"
+        ...base,
+        tintColor: "#CD7F32", // Accurate Bronze
+        badgeClass: "badge-bronze",
+        borderAccent: "rgba(205, 127, 50, 0.5)",
       };
     }
     if (t === 'platinum') {
       return {
-        filter: "grayscale(100%) brightness(1.5) contrast(1.2) hue-rotate(180deg)",
-        shadow: "drop-shadow(0 8px 20px rgba(226,232,240,0.5))"
+        ...base,
+        tintColor: "#E5E4E2", // Accurate Platinum
+        badgeClass: "badge-platinum",
+        borderAccent: "rgba(229, 228, 226, 0.5)",
       };
     }
     // Default Gold
     return {
-      filter: "none",
-      shadow: "drop-shadow(0 8px 20px rgba(234,179,8,0.4))"
+      ...base,
+      tintColor: "#FFD700", // Accurate Gold
+      badgeClass: "badge-gold",
+      borderAccent: "rgba(255, 215, 0, 0.5)",
     };
   };
 
   const tierStyles = getTierStyles(customer.tier);
 
   return (
-    <Card className="bg-background/60 backdrop-blur-md border-border/50 shadow-sm animate-fade-in-up"
+    <Card className="shadow-sm animate-fade-in-up"
       style={{
         padding: "28px 36px",
         display: "flex",
@@ -51,61 +65,81 @@ export default function WelcomeBanner({ customer }: { customer: Dashboard["summa
         alignItems: "center",
         position: "relative",
         overflow: "hidden",
-        gap: 20,
+        borderColor: tierStyles.borderAccent,
+        minHeight: "160px",
       }}
     >
-      {/* Background orbs */}
-      <div className="orb orb-gold" style={{ width: 300, height: 300, top: -150, right: -50 }} />
-      <div className="orb orb-purple" style={{ width: 200, height: 200, bottom: -100, right: 150 }} />
+      {/* Background Image Layer */}
+      <div 
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
+        }}
+      >
+        <img
+          src="/images/offers/flipkart.png"
+          alt="Tier Background"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+            filter: "grayscale(100%) contrast(1.1)", // Base for clean tinting
+            transform: "scale(1.05)", 
+          }}
+        />
+        {/* Color Tint Overlay for accurate metallic color */}
+        <div style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: tierStyles.tintColor,
+          mixBlendMode: "color",
+        }} />
+        <div style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: tierStyles.tintColor,
+          mixBlendMode: "multiply",
+          opacity: 0.4,
+        }} />
+        {/* Dark Overlay for Text Readability */}
+        <div style={{
+          position: "absolute",
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0,
+          background: tierStyles.overlay,
+        }} />
+      </div>
 
-      {/* Left: Greeting text */}
+      {/* Greeting text content (Left side) */}
       <div style={{ position: "relative", zIndex: 1, flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
-          <p style={{ fontSize: 15, color: "var(--text-secondary)", fontWeight: 500 }}>
+          <p style={{ fontSize: 15, color: tierStyles.textMuted, fontWeight: 500 }}>
             {getGreeting()},
           </p>
-          <Badge variant={customer.tier.toLowerCase() as "gold" | "silver" | "platinum"}>
+          <span className={tierStyles.badgeClass}>
             {customer.tier} Member
-          </Badge>
+          </span>
         </div>
         <h1
           style={{
             fontSize: "clamp(22px, 4vw, 32px)",
             fontWeight: 800,
-            color: "var(--text-primary)",
+            color: tierStyles.textColor,
             letterSpacing: "-0.03em",
           }}
         >
           {customer.name}
         </h1>
-        <p style={{ color: "var(--text-muted)", marginTop: 4, fontSize: 13 }}>
-          Phone: <span style={{ color: "var(--text-secondary)" }}>{customer.phoneNo}</span>
+        <p style={{ color: tierStyles.textMuted, marginTop: 4, fontSize: 13 }}>
+          Phone: <span style={{ color: tierStyles.textColor }}>{customer.phoneNo}</span>
         </p>
-      </div>
-
-      {/* Right: Tier Coupon badge */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          flexShrink: 0,
-          width: "clamp(90px, 14vw, 140px)",
-          animation: "float 4s ease-in-out infinite",
-          filter: tierStyles.shadow,
-        }}
-      >
-        <img
-          src="/images/offers/flipkart.png"
-          alt={`${customer.tier} Tier Coupon`}
-          style={{
-            width: "100%",
-            height: "auto",
-            objectFit: "contain",
-            borderRadius: 12,
-            filter: tierStyles.filter,
-            transition: "filter 0.5s ease"
-          }}
-        />
       </div>
     </Card>
   );

@@ -8,6 +8,7 @@ import { TopProduct } from '../models/TopProduct';
 import { Offer } from '../models/Offer';
 import { Notification } from '../models/Notification';
 import { Organization } from '../models/Organization';
+import { Feedback } from '../models/Feedback';
 
 export class CustomerService {
   // ─────────────────────────────────────────
@@ -22,34 +23,41 @@ export class CustomerService {
     if (organizationId) couponQuery.organizationId = organizationId;
     if (outletId) couponQuery.outletId = outletId;
 
-    const rewardQuery: any = { profileId };
-    if (organizationId) rewardQuery.organizationId = organizationId;
-    if (outletId) rewardQuery.outletId = outletId;
-
-    const ledgerQuery: any = { profileId };
-    if (organizationId) ledgerQuery.organizationId = organizationId;
-    if (outletId) ledgerQuery.outletId = outletId;
-
-    const [profile, ledger, transactions, coupons, rewards, topProducts] = await Promise.all([
-      Profile.findOne({ _id: profileId }).select('-__v'),
-      RewardLedger.findOne(ledgerQuery),
-      Transaction.find(query).sort({ createdAt: -1 }),
-      Coupon.find({ ...couponQuery, status: 'active' }).sort({ issuedAt: -1 }), 
-      Reward.find({ ...rewardQuery, status: 'active' }).sort({ issuedAt: -1 }), 
-      TopProduct.find(query).sort({ orderCount: -1 }),
+    const [profile, ledger, coupons, rewards, topProducts, [txnAggregation]] = await Promise.all([
+      Profile.findOne({ _id: profileId }).select('name tier metrics'),
+      RewardLedger.findOne(query),
+      Coupon.find({ ...couponQuery, status: 'active' }).sort({ issuedAt: -1 }).limit(10), 
+      Reward.find({ ...query, status: 'active' }).sort({ issuedAt: -1 }).limit(10), 
+      TopProduct.find(query).sort({ orderCount: -1 }).limit(5),
+      Transaction.aggregate([
+        { $match: query },
+        {
+          $facet: {
+            stats: [
+              { $match: { type: 'bill_created' } },
+              { $group: { _id: null, totalOrders: { $sum: 1 }, totalSpend: { $sum: '$billAmount' }, lastVisit: { $max: '$createdAt' } } }
+            ],
+            history: [
+              { $sort: { createdAt: -1 } },
+              { $limit: 20 }
+            ]
+          }
+        }
+      ])
     ]);
 
     if (!profile) throw new Error('Profile not found');
 
-    // Compute metrics dynamically based on filtered transactions
-    const billTxns = transactions.filter(t => t.type === 'bill_created');
-    const totalOrders = billTxns.length;
-    const totalSpend = billTxns.reduce((sum, t) => sum + (t.billAmount || 0), 0);
+    const stats = txnAggregation?.stats[0] || { totalOrders: 0, totalSpend: 0, lastVisit: profile.metrics?.lastVisit || new Date() };
+    const history = txnAggregation?.history || [];
+
+    const totalOrders = stats.totalOrders;
+    const totalSpend = stats.totalSpend;
     const averageOrderValue = totalOrders > 0 ? Math.round(totalSpend / totalOrders) : 0;
-    const lastVisit = billTxns.length > 0 ? billTxns[0].createdAt : (profile.metrics?.lastVisit || new Date());
+    const lastVisit = stats.lastVisit;
     
     let recencyDays = 0;
-    if (billTxns.length > 0) {
+    if (totalOrders > 0) {
       const diffTime = Math.abs(Date.now() - new Date(lastVisit).getTime());
       recencyDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
@@ -59,7 +67,7 @@ export class CustomerService {
         customer: {
           name: profile.name,
           phoneNo: phone,
-          tier: profile.tier,
+          tier: ledger?.tier || profile.tier,
           points: ledger?.points || 0,
           walletBalance: ledger?.walletBalance || 0,
         },
@@ -71,7 +79,7 @@ export class CustomerService {
           lastVisit,
         }
       },
-      transactionHistory: transactions.map(t => {
+      transactionHistory: history.map((t: any) => {
         const impact = t.pointsImpact || 0;
         const impactStr = impact > 0 ? `+${impact}` : impact.toString();
         return {
@@ -124,7 +132,7 @@ export class CustomerService {
       customerId: profile._id, // use profile._id as customerId for frontend compatibility
       name: profile.name,
       phone: account?.phoneNo || '',
-      membership: profile.tier,
+      membership: ledger?.tier || profile.tier,
       rewardPoints: ledger?.points || 0,
       walletBalance: ledger?.walletBalance || 0,
       isActive: profile.isActive,
@@ -145,15 +153,39 @@ export class CustomerService {
     if (organizationId) ledgerQuery.organizationId = organizationId;
     if (outletId) ledgerQuery.outletId = outletId;
 
-    const [ledger, transactions] = await Promise.all([
+    const [ledger, [txnAggregation]] = await Promise.all([
       RewardLedger.findOne(ledgerQuery),
-      Transaction.find({ 
-        ...query, 
-        type: { $in: ['reward_grant', 'redemption', 'loyalty_award', 'points_expiry', 'rule_action', 'bill_created'] } 
-      }).sort({ createdAt: -1 })
+      Transaction.aggregate([
+        { 
+          $match: { 
+            ...query, 
+            type: { $in: ['reward_grant', 'redemption', 'loyalty_award', 'points_expiry', 'rule_action', 'bill_created'] } 
+          } 
+        },
+        {
+          $facet: {
+            stats: [
+              {
+                $group: {
+                  _id: null,
+                  totalEarned: { $sum: { $cond: [{ $gte: ['$pointsImpact', 0] }, '$pointsImpact', 0] } },
+                  totalRedeemed: { $sum: { $cond: [{ $lt: ['$pointsImpact', 0] }, { $abs: '$pointsImpact' }, 0] } }
+                }
+              }
+            ],
+            history: [
+              { $sort: { createdAt: -1 } },
+              { $limit: 100 }
+            ]
+          }
+        }
+      ])
     ]);
 
-    const rewardTransactions = transactions.map(t => {
+    const stats = txnAggregation?.stats[0] || { totalEarned: 0, totalRedeemed: 0 };
+    const history = txnAggregation?.history || [];
+
+    const rewardTransactions = history.map((t: any) => {
       const pImpact = t.pointsImpact || 0;
       return {
         _id: t._id,
@@ -167,7 +199,7 @@ export class CustomerService {
       };
     });
 
-    const transactionHistory = transactions.map(t => {
+    const transactionHistory = history.map((t: any) => {
       const impact = t.pointsImpact || 0;
       const impactStr = impact > 0 ? `+${impact}` : impact.toString();
       return {
@@ -182,18 +214,11 @@ export class CustomerService {
       };
     });
 
-    let totalEarned = 0;
-    let totalRedeemed = 0;
-    rewardTransactions.forEach(t => {
-      if (t.type === 'earned') totalEarned += t.points;
-      else totalRedeemed += t.points;
-    });
-
     return {
       summary: {
         currentBalance: ledger?.points || 0,
-        totalEarned,
-        totalRedeemed
+        totalEarned: stats.totalEarned,
+        totalRedeemed: stats.totalRedeemed
       },
       transactions: rewardTransactions,
       transactionHistory,
@@ -209,10 +234,31 @@ export class CustomerService {
     if (organizationId) query.organizationId = organizationId;
     if (outletId) query.outletId = outletId;
 
-    const [profile, transactions, orgs] = await Promise.all([
+    const [profile, orgs, [txnAggregation]] = await Promise.all([
       Profile.findOne({ _id: profileId }).select('metrics'),
-      Transaction.find(query).sort({ createdAt: -1 }),
-      Organization.find({})
+      Organization.find({}),
+      Transaction.aggregate([
+        { $match: query },
+        {
+          $facet: {
+            stats: [
+              {
+                $group: {
+                  _id: null,
+                  totalPurchases: { $sum: 1 },
+                  totalAmount: { $sum: '$billAmount' },
+                  totalRewardsEarned: { $sum: { $abs: { $ifNull: ['$pointsImpact', 0] } } },
+                  lastVisit: { $max: '$createdAt' }
+                }
+              }
+            ],
+            history: [
+              { $sort: { createdAt: -1 } },
+              { $limit: 100 }
+            ]
+          }
+        }
+      ])
     ]);
 
     const orgMap = orgs.reduce((acc, org) => {
@@ -220,34 +266,29 @@ export class CustomerService {
       return acc;
     }, {} as Record<string, string>);
 
-    let totalPurchases = transactions.length;
-    let totalAmount = 0;
-    let totalRewardsEarned = 0;
+    const stats = txnAggregation?.stats[0] || { totalPurchases: 0, totalAmount: 0, totalRewardsEarned: 0, lastVisit: new Date() };
+    const history = txnAggregation?.history || [];
 
-    const purchases = transactions.map(t => {
-      const amount = t.billAmount || 0;
-      const earned = Math.abs(t.pointsImpact || 0);
-      
-      totalAmount += amount;
-      totalRewardsEarned += earned;
+    const totalPurchases = stats.totalPurchases;
+    const totalAmount = stats.totalAmount;
+    const totalRewardsEarned = stats.totalRewardsEarned;
 
-      return {
-        _id: t._id,
-        customerId: profileId,
-        invoiceNumber: t._id,
-        storeName: orgMap[t.organizationId] || 'OwnRewards Store',
-        storeLocation: t.outletId || 'Online',
-        items: t.metadata?.items || [],
-        amount,
-        rewardEarned: earned,
-        date: t.createdAt,
-        paymentStatus: 'completed',
-        paymentMethod: 'card'
-      };
-    });
+    const purchases = history.map((t: any) => ({
+      _id: t._id,
+      customerId: profileId,
+      invoiceNumber: t._id,
+      storeName: orgMap[t.organizationId] || 'OwnRewards Store',
+      storeLocation: t.outletId || 'Online',
+      items: t.metadata?.items || [],
+      amount: t.billAmount || 0,
+      rewardEarned: Math.abs(t.pointsImpact || 0),
+      date: t.createdAt,
+      paymentStatus: 'completed',
+      paymentMethod: 'card'
+    }));
 
     const averageOrderValue = totalPurchases > 0 ? Math.round(totalAmount / totalPurchases) : 0;
-    const lastVisit = transactions.length > 0 ? transactions[0].createdAt : new Date();
+    const lastVisit = stats.lastVisit;
 
     return {
       summary: {
@@ -258,7 +299,7 @@ export class CustomerService {
           totalOrders: totalPurchases,
           totalSpend: totalAmount,
           averageOrderValue,
-          recencyDays: 0, // dynamic fallback
+          recencyDays: 0, 
           lastVisit
         }
       },
@@ -412,5 +453,30 @@ export class CustomerService {
       { $set: update },
       { new: true, select: '-__v' }
     );
+  }
+
+  // ─────────────────────────────────────────
+  // Feedback
+  // ─────────────────────────────────────────
+  static async submitFeedback(
+    profileId: string,
+    organizationId: string,
+    outletId: string | undefined,
+    data: any,
+    fileMetadata?: any
+  ) {
+    const feedback = new Feedback({
+      profileId,
+      organizationId,
+      outletId,
+      type: data.type,
+      text: data.text,
+      purchaseId: data.purchaseId,
+      rating: data.rating ? Number(data.rating) : undefined,
+      comment: data.comment,
+      fileMetadata
+    });
+
+    return feedback.save();
   }
 }

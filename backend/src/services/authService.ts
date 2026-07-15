@@ -149,7 +149,7 @@ export class AuthService {
         accountId: account._id,
         name: profile.name,
         phone: account.phoneNo,
-        membership: profile.tier,
+        membership: ledger?.tier || profile.tier,
         rewardPoints: points, // Pulled from RewardLedger for existing, or 0 for new
         walletBalance: profile.walletBalance,
         memberSince: profile.createdAt || new Date(),

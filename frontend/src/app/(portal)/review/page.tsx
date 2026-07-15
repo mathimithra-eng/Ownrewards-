@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { MessageSquare, Star, Image as ImageIcon, Send, FileCheck, AlertCircle, Loader2 } from "lucide-react";
+import api from "@/lib/api";
 
 type TabType = "suggestion" | "feedback";
 
@@ -103,12 +104,9 @@ export default function ReviewPage() {
       formData.append("type", "suggestion");
       formData.append("text", suggestionText);
 
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await api.post("/customer/feedback", formData);
 
-      if (!res.ok) {
+      if (res.status !== 200 && res.status !== 201) {
         throw new Error("Failed to submit");
       }
 
@@ -150,12 +148,9 @@ export default function ReviewPage() {
       formData.append("comment", feedbackComment);
       formData.append("file", file);
 
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await api.post("/customer/feedback", formData);
 
-      if (!res.ok) {
+      if (res.status !== 200 && res.status !== 201) {
         throw new Error("Failed to submit");
       }
 

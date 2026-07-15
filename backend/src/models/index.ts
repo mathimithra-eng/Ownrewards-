@@ -12,3 +12,4 @@ export { Session, ISession } from './Session';
 export { ChatHistory, IChatHistory, IChatMessage } from './ChatHistory';
 export { Organization, IOrganization } from './Organization';
 export { Outlet, IOutlet } from './Outlet';
+export { Feedback, IFeedback } from './Feedback';

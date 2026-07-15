@@ -40,4 +40,10 @@ router.patch('/notifications/read-all', CustomerController.markAllNotificationsR
 // GET /api/customer/organizations
 router.get('/organizations', CustomerController.getOrganizations);
 
+import multer from 'multer';
+const upload = multer({ dest: 'uploads/' });
+
+// POST /api/customer/feedback
+router.post('/feedback', upload.single('file'), CustomerController.submitFeedback);
+
 export default router;

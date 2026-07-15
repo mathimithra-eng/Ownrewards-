@@ -311,6 +311,26 @@ body {
   text-transform: uppercase;
 }
 
+.badge-bronze {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+}
+
+.badge-member {
+  background: linear-gradient(135deg, #64748b, #475569);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+}
+
 /* ─────────────────────────────────────────────────────────
    Dashboard Responsive Grid
 ───────────────────────────────────────────────────────── */

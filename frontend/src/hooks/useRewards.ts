@@ -1,33 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { RewardsData } from "@/types";
 import { useTenant } from "@/contexts/TenantContext";
 
 export function useRewards() {
-  const [data, setData] = useState<RewardsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { activeOrgId, activeOutletId } = useTenant();
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['rewards', activeOrgId, activeOutletId],
+    queryFn: async () => {
       const res = await api.get("/customer/rewards");
-      setData(res.data.data);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || "Failed to load rewards");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return res.data.data as RewardsData;
+    },
+  });
 
-  useEffect(() => {
-    fetch();
-  }, [fetch, activeOrgId, activeOutletId]);
-
-  return { data, loading, error, refetch: fetch };
+  return {
+    data: data || null,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : null,
+    refetch
+  };
 }
